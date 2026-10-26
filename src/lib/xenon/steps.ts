@@ -8,7 +8,7 @@
 
 import type { MessageDTO } from "./types";
 
-export type AgentStepKind = "plan" | "search" | "read" | "synthesize";
+export type AgentStepKind = "plan" | "search" | "read" | "github" | "synthesize";
 export type AgentStepState = "start" | "done";
 
 /** یک گام از فعالیت عامل */
@@ -44,7 +44,13 @@ interface PersistedStepsPayload {
 }
 
 function isAgentStepKind(value: unknown): value is AgentStepKind {
-  return value === "plan" || value === "search" || value === "read" || value === "synthesize";
+  return (
+    value === "plan" ||
+    value === "search" ||
+    value === "read" ||
+    value === "github" ||
+    value === "synthesize"
+  );
 }
 
 function isAgentStep(value: unknown): value is AgentStep {

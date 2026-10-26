@@ -9,6 +9,7 @@ import {
   BookOpen,
   Check,
   ChevronDown,
+  Github,
   ListChecks,
   Loader2,
   Search,
@@ -27,6 +28,7 @@ const KIND_ICON: Record<string, LucideIcon> = {
   plan: ListChecks,
   search: Search,
   read: BookOpen,
+  github: Github,
   synthesize: Sparkles,
 };
 
@@ -34,6 +36,7 @@ const KIND_LABEL_KEY: Record<string, TranslationKey> = {
   plan: "agent.step.plan",
   search: "agent.step.search",
   read: "agent.step.read",
+  github: "agent.step.github",
   synthesize: "agent.step.synthesize",
 };
 

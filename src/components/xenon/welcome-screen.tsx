@@ -86,8 +86,8 @@ export function WelcomeScreen() {
           <Composer embedded />
         </div>
 
-        {/* چیپ‌های پیشنهاد: دکمه‌های شبح کوچک */}
-        <div className="mt-4 flex w-full flex-wrap justify-center gap-1.5">
+        {/* Z.ai-style suggestion cards: 2-col grid on sm+, single column on phones */}
+        <div className="mt-5 grid w-full grid-cols-1 gap-2 sm:grid-cols-2">
           {SUGGESTIONS.map((s) => (
             <button
               key={s.action}
@@ -95,15 +95,27 @@ export function WelcomeScreen() {
               title={t(s.promptKey)}
               aria-label={t("a11y.suggestion", { prompt: t(s.promptKey) })}
               onClick={() => runSuggestion(s)}
-              className="inline-flex h-8 items-center gap-1.5 rounded-full border border-border/60 bg-background/50 px-3 text-xs text-muted-foreground transition-all hover:border-primary/40 hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 active:scale-[0.98]"
+              className="group flex items-start gap-2.5 rounded-xl border border-border/60 bg-card/50 px-3 py-2.5 text-start transition-all hover:border-primary/40 hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 active:scale-[0.99]"
             >
-              <s.icon className="h-3.5 w-3.5 text-primary/80" aria-hidden />
-              {t(s.labelKey)}
+              <span
+                className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-md border border-border/50 bg-background/70 text-primary/80 transition-colors group-hover:border-primary/40 group-hover:text-primary"
+                aria-hidden
+              >
+                <s.icon className="h-3.5 w-3.5" />
+              </span>
+              <span className="min-w-0">
+                <span className="block truncate text-xs font-medium text-foreground/90">
+                  {t(s.labelKey)}
+                </span>
+                <span className="mt-0.5 line-clamp-1 block text-[0.7rem] leading-4 text-muted-foreground">
+                  {t(s.promptKey)}
+                </span>
+              </span>
             </button>
           ))}
         </div>
 
-        <p className="mt-6 text-center text-[0.7rem] text-muted-foreground/70">{t("welcome.disclaimer")}</p>
+        <p className="mt-5 text-center text-[0.7rem] text-muted-foreground/70">{t("welcome.disclaimer")}</p>
       </motion.section>
     </div>
   );

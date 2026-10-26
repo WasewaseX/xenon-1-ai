@@ -505,8 +505,10 @@ export function Composer({ embedded = false }: ComposerProps) {
           </p>
         )}
 
+        {/* embedded (welcome) shows the keyboard hint only — the disclaimer is
+            rendered once by the welcome screen below the suggestion cards */}
         <p className={cn("text-center text-[0.7rem] text-muted-foreground", embedded ? "mt-1.5" : "mt-1.5 hidden sm:block")}>
-          {t("composer.hint")}
+          {embedded ? t("composer.hintShort") : t("composer.hint")}
         </p>
       </div>
     </div>

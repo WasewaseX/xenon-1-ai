@@ -331,3 +331,21 @@ Stage Summary:
 - public/novel/the-ninth-vein.pdf: 101 pages, 24 clickable TOC entries + 24 sidebar bookmarks, uniform A4, ~34.5k words (prologue + 18 chapters + 3 interludes + epilogue + nine-vein glossary)
 - Stream drops addressed at transport level; lint clean; all golden paths browser-verified
 - tauri-yt-downloader/ delivered by subagent (Task 4): complete Tauri v2 + Rust source, frontend compiled/type-checked, needs cargo on user machine
+
+---
+Task ID: 9 (UI redesign) + 10 (cloud access)
+Agent: Z.ai Code (main thread)
+Task: Cursor/Z.ai-agent style UI fixes; GitHub cloud access for the agent
+
+Work Log:
+- Fixed duplicate disclaimer: composer embedded variant now shows keyboard-shortcut hint only (new i18n key composer.hintShort EN/FA); welcome screen keeps the single disclaimer
+- Upgraded welcome suggestions from pill chips to Z.ai-style 2x2 card grid (icon badge + label + prompt snippet), responsive 1-col on phones
+- Added "github" AgentStepKind across steps.ts / types.ts / route.ts; agent-activity renders Github icon + localized label (EN/FA)
+- New src/lib/xenon/github.ts (server-only): parseGithubUrl, githubRead (repo meta + README + file/dir contents via REST), githubPutFile (Contents API create/update with sha handling, path sanitization, 200KB cap); token read from process.env only
+- Agent loop: new step 2.5 reads github.com URLs referenced by the user into pageContext + sources; post-synthesis save flow detects save/push/backup intent, plans the file via a second LLM call, commits, appends confirmation delta
+- Fixed .env.local GITHUB_REPO to include owner (WasewaseX/xenon-1-ai) — PUT was 404 without it; Next reloaded env automatically
+- E2E verified: agent committed notes/xenon-cloud-access-test-102.md @ 39a58e7 and the file exists on GitHub; read flow emits github step (s3) with repo meta+README; RTL (fa/rtl) and light theme screenshots verified; lint clean
+
+Stage Summary:
+- Xenon agent now has real cloud access: read any public GitHub repo/file, commit files to the configured repo with the server-side PAT (never exposed to client)
+- Welcome/disclaimer bug fixed; suggestion cards match Z.ai agent style; dark Cursor palette + light theme + RTL all verified

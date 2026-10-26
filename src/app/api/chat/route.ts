@@ -14,6 +14,12 @@ import {
 } from "@/lib/xenon/llm";
 import { sseStream } from "@/lib/xenon/sse";
 import {
+  parseGithubUrl,
+  githubRead,
+  githubPutFile,
+  ghConfigured,
+} from "@/lib/xenon/github";
+import {
   buildSystemPrompt,
   TITLE_PROMPT,
   AGENT_PLANNER_PROMPT,
@@ -414,7 +420,40 @@ export async function POST(req: NextRequest) {
         }
       }
 
-      // --- گام ۲: جست‌وجوهای وب (حداکثر ۳) ---
+      // --- گام ۲.۵: دسترسی ابری گیت‌هاب — خواندن مخزن‌ها/فایل‌های ارجاع‌شده ---
+      const ghUrls = userUrls.filter((u) => /github\.com\//i.test(u)).slice(0, 2);
+      if (ghUrls.length > 0) {
+        const ghStep = startAgentStep(
+          "github",
+          ghConfigured() ? "GitHub cloud: reading references" : "GitHub cloud (public read)"
+        );
+        let ghSummary = "";
+        for (const url of ghUrls) {
+          if (Date.now() > deadline) break;
+          const ref = parseGithubUrl(url);
+          if (!ref) continue;
+          const result = await githubRead(ref);
+          if (result.ok && result.context) {
+            pageContext += `${result.context}\n\n`;
+            if (result.source && !sources.some((s) => s.url === result.source!.url)) {
+              sources.push({
+                url: result.source.url,
+                name: result.source.name,
+                snippet: result.source.snippet,
+                host_name: "github.com",
+                rank: sources.length + 1,
+              });
+            }
+            ghSummary += (ghSummary ? ", " : "") + result.label;
+          } else {
+            ghSummary += (ghSummary ? ", " : "") + `${result.label} (${result.error ?? "failed"})`;
+          }
+        }
+        emit({ type: "sources", sources: [...sources] });
+        ghStep.done(ghSummary || "nothing readable");
+      }
+
+      // --- گام ۳: جست‌وجوهای وب (حداکثر ۳) ---
       for (const query of queries.slice(0, AGENT_MAX_SEARCHES)) {
         if (Date.now() > deadline) break;
         const step = startAgentStep("search", `Searching the web: ${shorten(query, 80)}`);
@@ -588,6 +627,66 @@ export async function POST(req: NextRequest) {
       const msg = err instanceof Error ? err.message : "خطای ناشناخته در تولید پاسخ";
       if (!assistantContent) {
         emit({ type: "error", message: `خطا در پردازش درخواست: ${mapUpstreamError(msg)}` });
+      }
+    }
+
+    // ---------- دسترسی ابری: ذخیره‌سازی در گیت‌هاب (تشخیص نیت + تعهد دوم) ----------
+    // اگر کاربر خواست چیزی در گیت‌هاب ذخیره شود، عامل با یک فراخوانی غیرجریانی
+    // مسیر/پیام/محتوا را برمی‌سازد و از طریق Contents API کامیت می‌شود.
+    const GH_SAVE_INTENT_RE =
+      /\b(save|store|push|backup|commit|upload|sabt)\b[\s\S]{0,120}\b(github|repo|repository)\b/i;
+    if (!signal.aborted && assistantContent && !hasImages && GH_SAVE_INTENT_RE.test(userContent)) {
+      const saveStep = startAgentStep("github", "Saving to GitHub");
+      try {
+        if (!ghConfigured()) {
+          saveStep.done("GitHub not configured");
+          pushDelta(
+            `\n\n⚠️ GitHub save is not configured on the server (missing GITHUB_TOKEN / GITHUB_REPO).`
+          );
+        } else {
+          const GH_SAVE_PROMPT = `You are the GitHub saver of the Xenon 1 agent. The user asked to save something to GitHub, and the assistant has produced an answer. Decide what single file to commit.
+
+Return ONLY a JSON object (no prose, no code fences) with exactly these keys:
+{"path":"dir/name.md","message":"concise commit message","content":"full file content as UTF-8 text"}
+
+Rules:
+- path: safe repo-relative path; add a short dated prefix directory like notes/ or code/ when sensible; NEVER use ".." or absolute paths.
+- content: the artifact to persist — usually the assistant answer cleaned up as Markdown, or the code snippet the user asked to store. Preserve Markdown formatting inside the JSON string.
+- message: English imperative commit message.
+- If nothing meaningful can be saved, return {"path":"","message":"","content":""}.`;
+          const specRaw = await complete(
+            [
+              { role: "system", content: GH_SAVE_PROMPT },
+              {
+                role: "user",
+                content: `User request:\n${shorten(userContent, 800)}\n\nAssistant answer:\n${shorten(assistantContent, 12_000)}`,
+              },
+            ],
+            { thinking: false }
+          );
+          const jsonText = specRaw.content.replace(/^[^{]*{/, "{").replace(/}[^}]*$/, "}");
+          const spec = JSON.parse(jsonText) as { path?: string; message?: string; content?: string };
+          if (spec.path && spec.content) {
+            const result = await githubPutFile(spec.path, spec.message || "", spec.content);
+            if (result.ok) {
+              saveStep.done(`${result.path}${result.sha ? ` @ ${result.sha.slice(0, 7)}` : ""}`);
+              pushDelta(
+                `\n\n✅ **Saved to GitHub** — \`${result.path}\`${result.sha ? ` (commit \`${result.sha.slice(0, 7)}\`)` : ""}${result.htmlUrl ? `\n${result.htmlUrl}` : ""}`
+              );
+            } else {
+              saveStep.done(`failed: ${result.error ?? "unknown"}`);
+              pushDelta(`\n\n⚠️ GitHub save failed: ${result.error ?? "unknown error"}`);
+            }
+          } else {
+            saveStep.done("nothing to save");
+          }
+        }
+      } catch (err) {
+        console.warn("[chat] github save failed:", err);
+        saveStep.done("GitHub save failed");
+        pushDelta(
+          `\n\n⚠️ GitHub save failed: ${err instanceof Error ? mapUpstreamError(err.message) : "unknown error"}`
+        );
       }
     }
 

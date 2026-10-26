@@ -152,6 +152,7 @@ const en = {
   "composer.imageGenLabel": "Image",
   "composer.charCount": "{count} characters",
   "composer.hint": "Xenon can make mistakes. Enter to send, Shift+Enter for a new line",
+  "composer.hintShort": "Enter to send · Shift+Enter for a new line",
   "composer.generating": "Generating response…",
   "composer.recording": "Recording… {timer} — tap the microphone again to finish",
   "composer.transcribing": "Transcribing speech…",
@@ -210,6 +211,7 @@ const en = {
   "agent.step.plan": "Planning",
   "agent.step.search": "Searching the web",
   "agent.step.read": "Reading",
+  "agent.step.github": "GitHub cloud access",
   "agent.step.synthesize": "Synthesizing the answer",
 
   // نوار وضعیت
@@ -352,6 +354,7 @@ const fa: Record<TranslationKey, string> = {
   "composer.imageGenLabel": "تصویرساز",
   "composer.charCount": "{count} نویسه",
   "composer.hint": "زنون می‌تواند خطا کند. Enter برای ارسال، Shift+Enter برای سطر جدید",
+  "composer.hintShort": "Enter برای ارسال · Shift+Enter برای سطر جدید",
   "composer.generating": "در حال تولید پاسخ…",
   "composer.recording": "در حال ضبط… {timer} — برای پایان، دکمهٔ میکروفون را دوباره بزنید",
   "composer.transcribing": "در حال تبدیل گفتار به نوشتار…",
@@ -407,6 +410,7 @@ const fa: Record<TranslationKey, string> = {
   "agent.step.plan": "برنامه‌ریزی",
   "agent.step.search": "جست‌وجوی وب",
   "agent.step.read": "خواندن صفحه",
+  "agent.step.github": "دسترسی ابری گیت‌هاب",
   "agent.step.synthesize": "تولید پاسخ",
 
   "status.attribution": "قدرت‌گرفته از GLM از طریق API زی‌ای‌آی",
