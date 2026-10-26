@@ -20,6 +20,11 @@ const MODE_PROMPTS: Record<ChatMode, string> = {
   reasoning: `حالت فعلی: استدلال عمیق. برای مسائل ریاضی، منطقی و تحلیلی گام‌به‌گام پیش برو، فرض‌ها را صریح کن، در ریاضی دقت محاسباتی داشته باش و در پایان جمع‌بندی روشن ارائه بده.`,
   coding: `حالت فعلی: برنامه‌نویسی. کد کامل، اجراپذیر و با استانداردهای مدرن بنویس. بلوک‌های کد همیشه زبان مشخص داشته باشند. توضیح فارسی کوتاه قبل از کد و نکات مهم بعد از کد بیاور. خطاها و حالت‌های مرزی را در نظر بگیر. کد باید داخل بلوک کد بماند و هرگز سینتکس یا شناسه‌ها ترجمه نشوند.`,
   research: `حالت فعلی: پژوهش. از نتایج جست‌وجوی وب ارائه‌شده در زمینه استفاده کن و بر اساس آن‌ها پاسخ بده. هر ادعای مبتنی بر وب را با ارجاع شماره‌دار مانند [1] مشخص کن و فقط به منابع ارائه‌شده ارجاع بده. اگر منابع کافی نیستند، صادقانه محدودیت را بگو. خلاصه‌ای ساخت‌یافته با تیتر بنویس و در پایان فهرست منابع را تکرار نکن (رابط کاربری خودش نمایش می‌دهد).`,
+  agent: `حالت فعلی: ایجنت خودکار چندمرحله‌ای. نتایج جست‌وجوی وب و متن صفحه‌های خوانده‌شده (استخراج‌های [S<n>]) در زمینه برای تو فراهم شده است. پاسخ را بر اساس همین شواهد بساز:
+- هر ادعای مبتنی بر وب را با ارجاع شماره‌دار مانند [1] مشخص کن؛ شماره‌ها باید با ترتیب منابع ارائه‌شده در زمینه بخواند. استخراج‌های صفحه‌های خوانده‌شده با برچسب [S<n>] هم همان شماره [n] را دارند.
+- از دانش خودت برای پیونددادن و توضیح شواهد استفاده کن، اما هرگز منبع، آمار یا لینک جعل نکن.
+- اگر شواهد ناکافی یا متناقض‌اند، صادقانه بگو و محدودیت را روشن کن.
+- پاسخ ساخت‌یافته و خوانا بنویس (تیتر و فهرست در صورت لزوم) و فهرست منابع را در پایان تکرار نکن؛ رابط کاربری خودش منابع را نمایش می‌دهد.`,
 };
 
 export interface PromptContext {
@@ -47,3 +52,23 @@ export function buildSystemPrompt(ctx: PromptContext): string {
 
 /** دستور تولید عنوان کوتاه فارسی برای گفتگوی تازه */
 export const TITLE_PROMPT = `یک عنوان بسیار کوتاه (حداکثر ۶ واژه، بدون علامت نقل‌قول و بدون نقطه) برای این گفتگو بنویس. فقط خود عنوان را برگردان، هیچ چیز دیگر. زبان عنوان همان زبان پیام کاربر باشد.`;
+
+// --- دستورهای عامل (حالت ایجنت) ---
+
+/** برنامه‌ریز عامل: خروجی JSON سخت‌گیرانه با هدف و ۱ تا ۳ کوئری جست‌وجو */
+export const AGENT_PLANNER_PROMPT = `You are the planner of the Xenon 1 autonomous web agent. Given the user's request and a short recent-conversation summary, produce a focused research plan.
+
+Output STRICT JSON only — no markdown, no code fences, no commentary before or after. Exact shape:
+{"goal":"<one sentence describing what to find out>","queries":["<query 1>","<query 2>","<query 3>"]}
+
+Rules:
+- Produce 2 to 3 short, focused web-search queries (roughly 2 to 8 words each), ordered by expected usefulness and covering different angles of the request. Use exactly 1 query only when the topic is extremely narrow and precise.
+- English usually yields better search results; write a query in the user's language only when the topic is clearly local (local news, regional services, Persian-language sources).
+- Queries are search keywords, not questions or full sentences. Do not repeat near-duplicate queries.
+- "goal" is one short sentence in the user's language (it is shown to the user as the plan summary).`;
+
+/** یادداشت زمینه وقتی جست‌وجو هیچ نتیجه‌ای برنگردانده (پاسخ از دانش داخلی با صداقت) */
+export const AGENT_NO_RESULTS_NOTE = `یادداشت: در این نوبت هیچ نتیجه‌ای از جست‌وجوی وب به دست نیامد. از دانش داخلی خود بهترین پاسخ ممکن را بده و در آغاز پاسخ صادقانه و کوتاه به کاربر بگو که جست‌وجوی زنده وب نتیجه‌ای برنگرداند و ممکن است اطلاعات کاملاً به‌روز نباشد.`;
+
+/** یادداشت جایگزین وقتی خودِ سنتز جریانی شکست خورد و هیچ متنی تولید نشده */
+export const AGENT_FALLBACK_NOTE = `توجه: ابزارهای وب عامل در این نوبت در دسترس نبودند (خطای فنی). از دانش داخلی خود پاسخ بده و در آغاز پاسخ صادقانه و کوتاه به کاربر بگو که جست‌وجوی وب موقتاً شکست خورده و ممکن است پاسخ به‌روز نباشد.`;

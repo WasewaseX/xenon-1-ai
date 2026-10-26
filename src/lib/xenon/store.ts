@@ -2,7 +2,10 @@
 // مدیریت وضعیت کلاینت: گفتگوها، پیام‌ها، جریان زنده، حافظه
 
 import { create } from "zustand";
+import { toast } from "@/hooks/use-toast";
 import * as api from "./api";
+import { translateNow } from "./i18n";
+import type { AgentStep, MessageWithSteps, XenonStepEvent } from "./steps";
 import type {
   AttachmentMeta,
   ChatMode,
@@ -11,6 +14,7 @@ import type {
   MemoryDTO,
   MessageDTO,
   StatsDTO,
+  StreamEvent,
 } from "./types";
 
 interface XenonState {
@@ -73,6 +77,37 @@ interface XenonState {
 let abortController: AbortController | null = null;
 let currentAudio: HTMLAudioElement | null = null;
 
+/** ادغام رخدادهای "step" عامل در نقشهٔ گام‌های زنده (id → step) */
+function mergeStepEvent(stepMap: Map<string, AgentStep>, event: XenonStepEvent): AgentStep[] {
+  const existing = stepMap.get(event.id);
+  if (event.state === "done") {
+    if (existing) {
+      existing.state = "done";
+      if (event.summary) existing.summary = event.summary;
+    } else {
+      stepMap.set(event.id, {
+        id: event.id,
+        kind: event.kind,
+        title: event.title,
+        state: "done",
+        summary: event.summary,
+      });
+    }
+  } else if (!existing) {
+    stepMap.set(event.id, { id: event.id, kind: event.kind, title: event.title, state: "start" });
+  }
+  return [...stepMap.values()];
+}
+
+/** پایان جریان: گام‌های بی‌پاسخ (بدون رویداد done) بسته می‌شوند تا اسپینر بی‌پایان نماند */
+function finalizeSteps(stepMap: Map<string, AgentStep>): AgentStep[] | null {
+  if (stepMap.size === 0) return null;
+  for (const step of stepMap.values()) {
+    if (step.state === "start") step.state = "done";
+  }
+  return [...stepMap.values()];
+}
+
 export const useXenon = create<XenonState>((set, get) => ({
   conversations: [],
   folders: [],
@@ -131,8 +166,23 @@ export const useXenon = create<XenonState>((set, get) => ({
         activeId: id,
         loadingMessages: false,
       });
-    } catch {
-      set({ loadingMessages: false });
+    } catch (err) {
+      // تاب‌آوری: گفتگوی حذف‌شده/منقضی هرگز نباید صفحهٔ مردهٔ خالی بسازد.
+      const reason = err instanceof Error ? err.message : "";
+      const looksMissing = /404|not ?found|یافت نشد|پیدا نشد|no longer exists/i.test(reason);
+      if (looksMissing) {
+        // گفتگو دیگر وجود ندارد: از فهرست حذف و به صفحهٔ خوش‌آمد برگرد
+        toast({ title: translateNow("toast.conversationMissing"), variant: "destructive" });
+        set((s) => ({
+          conversations: s.conversations.filter((c) => c.id !== id),
+          activeId: null,
+          messages: [],
+          loadingMessages: false,
+        }));
+      } else {
+        toast({ title: translateNow("toast.conversationLoadFailed"), variant: "destructive" });
+        set({ activeId: null, messages: [], loadingMessages: false });
+      }
     }
   },
 
@@ -179,7 +229,8 @@ export const useXenon = create<XenonState>((set, get) => ({
 
     const attachments = state.attachments;
     const mode = state.activeMode;
-    const hadActiveId = state.activeId;
+    const sentConversationId = state.activeId; // شناسهٔ گفتگو در لحظهٔ ارسال
+    let serverConversationId: string | null = null;
 
     set({
       sending: true,
@@ -193,8 +244,9 @@ export const useXenon = create<XenonState>((set, get) => ({
     let thinkingContent = "";
     let sources: MessageDTO["sources"] = null;
     let conversationCreated = false;
+    const stepMap = new Map<string, AgentStep>();
 
-    const updateAssistant = (patch: Partial<MessageDTO>) => {
+    const updateAssistant = (patch: Partial<MessageWithSteps>) => {
       set((s) => ({
         messages: s.messages.map((m) => (m.id === tempAssistantId ? { ...m, ...patch } : m)),
       }));
@@ -206,13 +258,13 @@ export const useXenon = create<XenonState>((set, get) => ({
         const { images } = await api.generateImages(text);
         const atts: AttachmentMeta[] = images.map((img, i) => ({
           id: `gen-${Date.now()}-${i}`,
-          name: `تصویر-${i + 1}.${img.mime === "image/jpeg" ? "jpg" : "png"}`,
+          name: `${translateNow("store.generatedImageName", { index: i + 1 })}.${img.mime === "image/jpeg" ? "jpg" : "png"}`,
           type: img.mime,
           size: Math.round((img.base64.length * 3) / 4),
           url: `data:${img.mime};base64,${img.base64}`,
           kind: "image",
         }));
-        const note = `تصویر برای درخواست «${text}» تولید شد.`;
+        const note = translateNow("toast.imageGenerated", { prompt: text });
         updateAssistant({ content: note, attachments: atts, streaming: false });
       } else {
         await api.streamChat(
@@ -224,17 +276,24 @@ export const useXenon = create<XenonState>((set, get) => ({
           },
           {
             signal: abortController.signal,
-            onEvent: (event) => {
+            onEvent: (streamEvent) => {
+              // رخداد "step" عامل هنوز به قرارداد types.ts اضافه نشده — از نوع ساختاری widen می‌شود
+              const event = streamEvent as StreamEvent | XenonStepEvent;
               switch (event.type) {
                 case "meta":
-                  if (!hadActiveId && !conversationCreated) {
+                  serverConversationId = event.conversationId;
+                  if (!conversationCreated && event.conversationId !== sentConversationId) {
                     conversationCreated = true;
-                    // گفتگوی تازه ساخته شد — در فهرست قرار بده
+                    // گفتگوی تازه ساخته شد (یا سرور شناسهٔ کهنه را خوددرمان کرد) —
+                    // شناسهٔ تازه را بپذیر و فهرست را تازه‌سازی کن
                     set((s) => ({
                       activeId: event.conversationId,
                     }));
                     get().refreshSidebar();
                   }
+                  break;
+                case "step":
+                  updateAssistant({ steps: mergeStepEvent(stepMap, event) });
                   break;
                 case "delta":
                   assistantContent += event.text;
@@ -258,7 +317,9 @@ export const useXenon = create<XenonState>((set, get) => ({
                 case "langWarning":
                   updateAssistant({ langWarning: true });
                   break;
-                case "done":
+                case "done": {
+                  const finalSteps = finalizeSteps(stepMap);
+                  if (finalSteps) updateAssistant({ steps: finalSteps });
                   updateAssistant({
                     streaming: false,
                     id: event.messageId !== tempAssistantId ? event.messageId : tempAssistantId,
@@ -266,6 +327,7 @@ export const useXenon = create<XenonState>((set, get) => ({
                     langWarning: event.langWarning,
                   });
                   break;
+                }
                 case "error":
                   updateAssistant({
                     streaming: false,
@@ -283,16 +345,21 @@ export const useXenon = create<XenonState>((set, get) => ({
         streaming: false,
         content:
           assistantContent ||
-          (aborted ? "⏹ تولید پاسخ متوقف شد." : `⚠️ ${err instanceof Error ? err.message : "خطای ارتباط با سرور"}`),
+          (aborted
+            ? translateNow("toast.stopped")
+            : `⚠️ ${err instanceof Error ? err.message : translateNow("toast.networkError")}`),
       });
     } finally {
       set({ sending: false, streaming: false });
       abortController = null;
       get().refreshSidebar();
       get().refreshStats();
-      // اگر گفتگوی تازه بود، پیام‌ها را برای اطمینان از شناسه‌های واقعی همگام کن
+      // همگام‌سازی پیام‌ها با سرور برای اطمینان از شناسه‌های واقعی:
+      // ۱) گفتگوی تازه  ۲) سرور شناسهٔ متفاوتی برگردانده (خوددرمانی گفتگوی کهنه)
       const active = get().activeId;
-      if (active && !hadActiveId) {
+      const serverReassigned =
+        serverConversationId !== null && serverConversationId !== sentConversationId;
+      if (active && (!sentConversationId || serverReassigned)) {
         api
           .fetchConversation(active)
           .then(({ messages }) => set({ messages }))
@@ -344,8 +411,9 @@ export const useXenon = create<XenonState>((set, get) => ({
     abortController = new AbortController();
     let assistantContent = "";
     let thinkingContent = "";
+    const stepMap = new Map<string, AgentStep>();
 
-    const updateAssistant = (patch: Partial<MessageDTO>) => {
+    const updateAssistant = (patch: Partial<MessageWithSteps>) => {
       set((s) => ({
         messages: s.messages.map((m) => (m.id === tempAssistantId ? { ...m, ...patch } : m)),
       }));
@@ -361,8 +429,12 @@ export const useXenon = create<XenonState>((set, get) => ({
         },
         {
           signal: abortController.signal,
-          onEvent: (event) => {
+          onEvent: (streamEvent) => {
+            const event = streamEvent as StreamEvent | XenonStepEvent;
             switch (event.type) {
+              case "step":
+                updateAssistant({ steps: mergeStepEvent(stepMap, event) });
+                break;
               case "delta":
                 assistantContent += event.text;
                 updateAssistant({ content: assistantContent });
@@ -384,13 +456,16 @@ export const useXenon = create<XenonState>((set, get) => ({
               case "langWarning":
                 updateAssistant({ langWarning: true });
                 break;
-              case "done":
+              case "done": {
+                const finalSteps = finalizeSteps(stepMap);
+                if (finalSteps) updateAssistant({ steps: finalSteps });
                 updateAssistant({
                   streaming: false,
                   servedModel: event.servedModel,
                   langWarning: event.langWarning,
                 });
                 break;
+              }
               case "error":
                 updateAssistant({
                   streaming: false,
@@ -407,7 +482,9 @@ export const useXenon = create<XenonState>((set, get) => ({
         streaming: false,
         content:
           assistantContent ||
-          (aborted ? "⏹ تولید پاسخ متوقف شد." : `⚠️ ${err instanceof Error ? err.message : "خطای ارتباط با سرور"}`),
+          (aborted
+            ? translateNow("toast.stopped")
+            : `⚠️ ${err instanceof Error ? err.message : translateNow("toast.networkError")}`),
       });
     } finally {
       set({ sending: false, streaming: false });
@@ -498,7 +575,7 @@ export const useXenon = create<XenonState>((set, get) => ({
       await currentAudio.play();
     } catch {
       set({ speakingId: null });
-      throw new Error("تولید گفتار ناموفق بود");
+      throw new Error(translateNow("message.toast.ttsFailed"));
     }
   },
 

@@ -150,6 +150,84 @@ export async function completeVisionStream(
   return body as unknown as ReadableStream<Uint8Array>;
 }
 
+// --- خواندن صفحه وب (حالت ایجنت) ---
+
+const PAGE_READER_TIMEOUT_MS = 20_000;
+const PAGE_TEXT_LIMIT = 3_000;
+
+/** نتیجه خواندن یک صفحه وب */
+export interface PageReadResult {
+  url: string;
+  title: string;
+  text: string;
+  publishedTime?: string;
+}
+
+interface SdkPageReaderResult {
+  code?: number;
+  data?: {
+    html?: string;
+    publishedTime?: string;
+    title?: string;
+    url?: string;
+  };
+}
+
+/** استخراج متن خوانا از HTML خام — بدون وابستگی بیرونی */
+function htmlToReadableText(html: string): string {
+  return html
+    .replace(/<script[\s\S]*?<\/script>/gi, " ")
+    .replace(/<style[\s\S]*?<\/style>/gi, " ")
+    .replace(/<noscript[\s\S]*?<\/noscript>/gi, " ")
+    .replace(/<svg[\s\S]*?<\/svg>/gi, " ")
+    .replace(/<template[\s\S]*?<\/template>/gi, " ")
+    .replace(/<\/(p|div|section|article|header|footer|li|ul|ol|table|tr|h[1-6]|blockquote|pre|figcaption)>/gi, "\n")
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/&quot;/gi, "\"")
+    .replace(/&#0?39;|&apos;/gi, "'")
+    .replace(/&#x([0-9a-f]+);/gi, (_, h: string) => String.fromCodePoint(parseInt(h, 16)))
+    .replace(/&#(\d+);/g, (_, d: string) => String.fromCodePoint(Number(d)))
+    .replace(/[ \t\u00a0]+/g, " ")
+    .replace(/\s*\n\s*/g, "\n")
+    .replace(/\n{2,}/g, "\n")
+    .trim();
+}
+
+/**
+ * خواندن یک صفحه وب با ابزار page_reader درگاه (همان SDK فایل).
+ * با مهلت زمانی (پیش‌فرض ۲۰ ثانیه) و استخراج متن خوانا؛ در هر خطا null برمی‌گرداند.
+ */
+export async function pageReader(url: string, timeoutMs = PAGE_READER_TIMEOUT_MS): Promise<PageReadResult | null> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    const zai = await getZai();
+    const raw = zai.functions.invoke("page_reader", { url }) as unknown as Promise<SdkPageReaderResult>;
+    const timeout = new Promise<never>((_, reject) => {
+      timer = setTimeout(() => reject(new Error("page_reader timeout")), timeoutMs);
+    });
+    const res = await Promise.race([raw, timeout]);
+    const html = res?.data?.html ?? "";
+    if (!html) return null;
+    const text = htmlToReadableText(html).slice(0, PAGE_TEXT_LIMIT);
+    if (!text) return null;
+    return {
+      url: res?.data?.url ?? url,
+      title: (res?.data?.title ?? "").trim(),
+      text,
+      publishedTime: res?.data?.publishedTime,
+    };
+  } catch {
+    return null;
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
 /**
  * جست‌وجوی وب برای حالت پژوهش.
  */

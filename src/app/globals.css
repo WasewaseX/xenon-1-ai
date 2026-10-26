@@ -78,37 +78,38 @@
   --sidebar-ring: oklch(0.51 0.23 295);
 }
 
+/* پالت تیرهٔ «Cursor-style»: بوم تقریباً سیاه (#0a0a0b)، سطوح تخت، خطوط مویی */
 .dark {
-  --background: oklch(0.155 0.012 300);
-  --foreground: oklch(0.96 0.005 300);
-  --card: oklch(0.19 0.014 300);
-  --card-foreground: oklch(0.96 0.005 300);
-  --popover: oklch(0.2 0.014 300);
-  --popover-foreground: oklch(0.96 0.005 300);
+  --background: oklch(0.145 0.004 300);
+  --foreground: oklch(0.95 0.005 300);
+  --card: oklch(0.178 0.006 300);
+  --card-foreground: oklch(0.95 0.005 300);
+  --popover: oklch(0.19 0.007 300);
+  --popover-foreground: oklch(0.95 0.005 300);
   --primary: oklch(0.62 0.21 295);
   --primary-foreground: oklch(0.985 0.005 300);
-  --secondary: oklch(0.26 0.016 300);
-  --secondary-foreground: oklch(0.96 0.005 300);
-  --muted: oklch(0.26 0.016 300);
-  --muted-foreground: oklch(0.68 0.012 300);
-  --accent: oklch(0.26 0.016 300);
-  --accent-foreground: oklch(0.96 0.005 300);
+  --secondary: oklch(0.23 0.01 300);
+  --secondary-foreground: oklch(0.95 0.005 300);
+  --muted: oklch(0.22 0.008 300);
+  --muted-foreground: oklch(0.66 0.012 300);
+  --accent: oklch(0.24 0.01 300);
+  --accent-foreground: oklch(0.95 0.005 300);
   --destructive: oklch(0.66 0.19 22);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 14%);
+  --border: oklch(1 0 0 / 8%);
+  --input: oklch(1 0 0 / 10%);
   --ring: oklch(0.62 0.21 295);
   --chart-1: oklch(0.488 0.243 264.376);
   --chart-2: oklch(0.696 0.17 162.48);
   --chart-3: oklch(0.769 0.188 70.08);
   --chart-4: oklch(0.627 0.265 303.9);
   --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.18 0.014 300);
-  --sidebar-foreground: oklch(0.96 0.005 300);
+  --sidebar: oklch(0.165 0.005 300);
+  --sidebar-foreground: oklch(0.95 0.005 300);
   --sidebar-primary: oklch(0.62 0.21 295);
   --sidebar-primary-foreground: oklch(0.985 0.005 300);
-  --sidebar-accent: oklch(0.26 0.016 300);
-  --sidebar-accent-foreground: oklch(0.96 0.005 300);
-  --sidebar-border: oklch(1 0 0 / 8%);
+  --sidebar-accent: oklch(1 0 0 / 5%);
+  --sidebar-accent-foreground: oklch(0.95 0.005 300);
+  --sidebar-border: oklch(1 0 0 / 6%);
   --sidebar-ring: oklch(0.62 0.21 295);
 }
 
@@ -232,6 +233,16 @@
   padding: 0.1em 0.4em;
   font-size: 0.88em;
   font-family: var(--font-mono);
+}
+
+/* --- دوزبانه: جهت هر بلوک محتوا بر اساس زبان همان پاراگراف (EN/FA) --- */
+.xenon-prose p,
+.xenon-prose li,
+.xenon-prose h1,
+.xenon-prose h2,
+.xenon-prose h3,
+.xenon-prose h4 {
+  unicode-bidi: plaintext;
 }
 
 /* --- چشمک نقطه تایپ زنده --- */

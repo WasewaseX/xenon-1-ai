@@ -1,0 +1,165 @@
+{
+  "files": {
+    "00-prologue.md": {
+      "label": "Prologue",
+      "title": "The Last Honest Thief",
+      "words": 1146,
+      "seconds": 55.6,
+      "at": "2026-10-26T16:02:36.101Z"
+    },
+    "ch01.md": {
+      "label": "Chapter 1",
+      "title": "Two Heartbeats",
+      "words": 2493,
+      "seconds": 48.9,
+      "at": "2026-10-26T16:04:01.594Z"
+    },
+    "ch02.md": {
+      "label": "Chapter 2",
+      "title": "The Courier",
+      "words": 1553,
+      "seconds": 31,
+      "at": "2026-10-26T16:04:35.050Z"
+    },
+    "ch03.md": {
+      "label": "Chapter 3",
+      "title": "Grace",
+      "words": 908,
+      "seconds": 38.4,
+      "at": "2026-10-26T16:05:15.908Z"
+    },
+    "ch04.md": {
+      "label": "Chapter 4",
+      "title": "The Silent Chorus",
+      "words": 1158,
+      "seconds": 48.6,
+      "at": "2026-10-26T16:06:07.037Z"
+    },
+    "ch05.md": {
+      "label": "Chapter 5",
+      "title": "The Professor of Impossible Anatomy",
+      "words": 2087,
+      "seconds": 36.6,
+      "at": "2026-10-26T16:06:46.142Z"
+    },
+    "ch06.md": {
+      "label": "Chapter 6",
+      "title": "The Cartographer",
+      "words": 1487,
+      "seconds": 63.9,
+      "at": "2026-10-26T16:07:52.510Z"
+    },
+    "ch07.md": {
+      "label": "Chapter 7",
+      "title": "Memory Bleed",
+      "words": 1106,
+      "seconds": 44.9,
+      "at": "2026-10-26T16:08:39.909Z"
+    },
+    "ch08.md": {
+      "label": "Chapter 8",
+      "title": "War of Ledgers",
+      "words": 1399,
+      "seconds": 56.2,
+      "at": "2026-10-26T16:09:38.575Z"
+    },
+    "ch09.md": {
+      "label": "Chapter 9",
+      "title": "The Exchange",
+      "words": 1181,
+      "seconds": 50.5,
+      "at": "2026-10-26T16:10:31.570Z"
+    },
+    "ch10.md": {
+      "label": "Chapter 10",
+      "title": "Vein of Breath",
+      "words": 1381,
+      "seconds": 70.7,
+      "at": "2026-10-26T16:11:44.763Z"
+    },
+    "ch11.md": {
+      "label": "Chapter 11",
+      "title": "The Girl Who Heard the Singing",
+      "words": 1502,
+      "seconds": 34.8,
+      "at": "2026-10-26T16:12:22.061Z"
+    },
+    "ch12.md": {
+      "label": "Chapter 12",
+      "title": "Chorus of Flesh",
+      "words": 1686,
+      "seconds": 66.1,
+      "at": "2026-10-26T16:13:55.713Z"
+    },
+    "ch13.md": {
+      "label": "Chapter 13",
+      "title": "Nerve",
+      "words": 1573,
+      "seconds": 36,
+      "at": "2026-10-26T16:14:34.190Z"
+    },
+    "ch14.md": {
+      "label": "Chapter 14",
+      "title": "The Ninth Door",
+      "words": 1002,
+      "seconds": 53,
+      "at": "2026-10-26T16:15:29.666Z"
+    },
+    "ch15.md": {
+      "label": "Chapter 15",
+      "title": "Truce of Salt",
+      "words": 1576,
+      "seconds": 62.4,
+      "at": "2026-10-26T16:16:34.589Z"
+    },
+    "ch16.md": {
+      "label": "Chapter 16",
+      "title": "The Offering",
+      "words": 1460,
+      "seconds": 63.1,
+      "at": "2026-10-26T16:17:40.230Z"
+    },
+    "ch17.md": {
+      "label": "Chapter 17",
+      "title": "Bloom",
+      "words": 1511,
+      "seconds": 59.7,
+      "at": "2026-10-26T16:18:42.407Z"
+    },
+    "ch18.md": {
+      "label": "Chapter 18",
+      "title": "The Cost",
+      "words": 900,
+      "seconds": 47.7,
+      "at": "2026-10-26T16:19:32.636Z"
+    },
+    "19-epilogue.md": {
+      "label": "Epilogue",
+      "title": "A Door in the Dark",
+      "words": 1268,
+      "seconds": 54.1,
+      "at": "2026-10-26T16:20:29.227Z"
+    },
+    "interlude-1.md": {
+      "label": "Interlude I",
+      "title": "The Tithe-Clerk's Day",
+      "words": 1306,
+      "seconds": 59.5,
+      "at": "2026-10-26T16:53:32.294Z"
+    },
+    "interlude-2.md": {
+      "label": "Interlude II",
+      "title": "The Weight of Scales",
+      "words": 1521,
+      "seconds": 66.3,
+      "at": "2026-10-26T16:54:41.083Z"
+    },
+    "interlude-3.md": {
+      "label": "Interlude III",
+      "title": "What the Lily Dreamed",
+      "words": 3297,
+      "seconds": 253.7,
+      "at": "2026-10-26T16:58:57.241Z"
+    }
+  }
+}

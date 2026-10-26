@@ -7,6 +7,8 @@ const nextConfig: NextConfig = {
     ignoreBuildErrors: true,
   },
   reactStrictMode: false,
+  // نشانگر «N» توسعهٔ Next.js در گوشهٔ پایین، روی نوار وضعیت افتاده بود — غیرفعال شد
+  devIndicators: false,
 };
 
 export default nextConfig;

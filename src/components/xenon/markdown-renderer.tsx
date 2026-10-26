@@ -11,13 +11,15 @@ import rehypeKatex from "rehype-katex";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism";
 import { Check, Copy } from "lucide-react";
+import { useT } from "@/components/xenon/locale-provider";
 
 function CodeBlockCopyButton({ text }: { text: string }) {
   const [copied, setCopied] = useState(false);
+  const t = useT();
   return (
     <button
       type="button"
-      aria-label="کپی کد"
+      aria-label={t("a11y.copyCode")}
       className="inline-flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-background/60 hover:text-foreground"
       onClick={() => {
         navigator.clipboard.writeText(text).then(

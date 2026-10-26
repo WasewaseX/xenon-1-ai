@@ -1,7 +1,7 @@
 // Xenon 1 AI — Shared Types
 // تایپ‌های مشترک بین فرانت‌اند و بک‌اند
 
-export type ChatMode = "general" | "reasoning" | "coding" | "research";
+export type ChatMode = "general" | "reasoning" | "coding" | "research" | "agent";
 
 export type Role = "user" | "assistant";
 
@@ -81,11 +81,31 @@ export interface StatsDTO {
   byKind: Record<string, number>;
 }
 
+// --- گام‌های عامل (حالت ایجنت) ---
+export type AgentStepKind = "plan" | "search" | "read" | "synthesize";
+
+export type AgentStepState = "start" | "done";
+
+/** یک گام برای نمایش در تایم‌لاین فعالیت عامل */
+export interface AgentStepRecord {
+  id: string;
+  kind: AgentStepKind;
+  title: string;
+  summary?: string;
+}
+
+/** قالب ذخیره گام‌های عامل در ستون thinking پیام دستیار */
+export interface AgentStepsPayload {
+  format: "xenon-steps-v1";
+  steps: AgentStepRecord[];
+}
+
 // --- رویدادهای SSE جریان گفتگو ---
 export type StreamEvent =
   | { type: "meta"; conversationId: string; userMessageId: string; assistantMessageId: string; servedModel?: string }
   | { type: "delta"; text: string }
   | { type: "thinking"; text: string }
+  | { type: "step"; id: string; kind: AgentStepKind; title: string; state: AgentStepState; summary?: string }
   | { type: "sources"; sources: ResearchSource[] }
   | { type: "title"; title: string }
   | { type: "langWarning"; hint: string }

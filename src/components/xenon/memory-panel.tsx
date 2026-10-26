@@ -22,18 +22,16 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import { formatDate } from "@/lib/xenon/i18n";
+import { useLocale, useT } from "@/components/xenon/locale-provider";
 import { useXenon } from "@/lib/xenon/store";
 
-const CATEGORIES: Array<{ value: string; label: string }> = [
-  { value: "preference", label: "ترجیح" },
-  { value: "fact", label: "دانش" },
-  { value: "project", label: "پروژه" },
-  { value: "general", label: "عمومی" },
+const CATEGORIES: Array<{ value: string; labelKey: "memory.category.preference" | "memory.category.fact" | "memory.category.project" | "memory.category.general" }> = [
+  { value: "preference", labelKey: "memory.category.preference" },
+  { value: "fact", labelKey: "memory.category.fact" },
+  { value: "project", labelKey: "memory.category.project" },
+  { value: "general", labelKey: "memory.category.general" },
 ];
-
-function categoryLabel(value: string): string {
-  return CATEGORIES.find((c) => c.value === value)?.label ?? "عمومی";
-}
 
 interface MemoryPanelProps {
   open: boolean;
@@ -42,6 +40,8 @@ interface MemoryPanelProps {
 
 export function MemoryPanel({ open, onOpenChange }: MemoryPanelProps) {
   const { toast } = useToast();
+  const t = useT();
+  const locale = useLocale();
   const memories = useXenon((s) => s.memories);
   const addMemory = useXenon((s) => s.addMemory);
   const removeMemory = useXenon((s) => s.removeMemory);
@@ -49,6 +49,9 @@ export function MemoryPanel({ open, onOpenChange }: MemoryPanelProps) {
   const [content, setContent] = useState("");
   const [category, setCategory] = useState("general");
   const [adding, setAdding] = useState(false);
+
+  const categoryLabel = (value: string): string =>
+    t(CATEGORIES.find((c) => c.value === value)?.labelKey ?? "memory.category.general");
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
@@ -59,9 +62,9 @@ export function MemoryPanel({ open, onOpenChange }: MemoryPanelProps) {
       .then(() => {
         setContent("");
         setCategory("general");
-        toast({ title: "به حافظه اضافه شد" });
+        toast({ title: t("memory.toast.added") });
       })
-      .catch(() => toast({ title: "افزودن به حافظه ناموفق بود", variant: "destructive" }))
+      .catch(() => toast({ title: t("memory.toast.addFailed"), variant: "destructive" }))
       .finally(() => setAdding(false));
   };
 
@@ -71,44 +74,40 @@ export function MemoryPanel({ open, onOpenChange }: MemoryPanelProps) {
         <DialogHeader className="ps-3">
           <DialogTitle className="flex items-center gap-2">
             <Brain className="h-5 w-5 text-primary" aria-hidden />
-            حافظه پایدار
+            {t("memory.title")}
           </DialogTitle>
-          <DialogDescription>
-            اطلاعاتی که زنون برای پاسخ‌های شخصی‌تر به‌کار می‌گیرد. هر زمان بخواهید می‌توانید ببینید، ویرایش یا حذف کنید.
-          </DialogDescription>
+          <DialogDescription>{t("memory.description")}</DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-2 sm:flex-row">
           <Input
             value={content}
             onChange={(e) => setContent(e.target.value)}
-            placeholder="چیز تازه‌ای درباره خودتان بگویید…"
-            aria-label="محتوای حافظه جدید"
+            placeholder={t("memory.inputPlaceholder")}
+            aria-label={t("a11y.memoryContent")}
             className="flex-1"
           />
           <Select value={category} onValueChange={setCategory}>
-            <SelectTrigger className="w-full sm:w-32" aria-label="دسته‌بندی حافظه">
+            <SelectTrigger className="w-full sm:w-32" aria-label={t("a11y.memoryCategory")}>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
               {CATEGORIES.map((c) => (
                 <SelectItem key={c.value} value={c.value}>
-                  {c.label}
+                  {t(c.labelKey)}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
           <Button type="submit" disabled={!content.trim() || adding} className="gap-1.5">
             {adding ? null : <Plus className="h-4 w-4" aria-hidden />}
-            افزودن
+            {t("common.add")}
           </Button>
         </form>
 
-        <div className="xenon-scroll -mx-1 min-h-0 flex-1 space-y-2 overflow-y-auto px-1 py-1" aria-label="فهرست حافظه‌ها">
+        <div className="xenon-scroll -mx-1 min-h-0 flex-1 space-y-2 overflow-y-auto px-1 py-1" aria-label={t("a11y.memoriesList")}>
           {memories.length === 0 ? (
-            <p className="py-10 text-center text-sm text-muted-foreground">
-              حافظه خالی است. از دکمهٔ «ذخیره در حافظه» زیر پیام‌ها هم می‌توانید استفاده کنید.
-            </p>
+            <p className="py-10 text-center text-sm text-muted-foreground">{t("memory.empty")}</p>
           ) : (
             memories.map((memory) => (
               <div
@@ -116,28 +115,22 @@ export function MemoryPanel({ open, onOpenChange }: MemoryPanelProps) {
                 className="group/mem flex items-start justify-between gap-3 rounded-xl border bg-card p-3"
               >
                 <div className="min-w-0 flex-1">
-                  <p className="whitespace-pre-wrap break-words text-sm leading-6">{memory.content}</p>
+                  <p className="whitespace-pre-wrap break-words text-sm leading-6" dir="auto">{memory.content}</p>
                   <div className="mt-2 flex items-center gap-2">
                     <Badge variant="secondary" className="rounded-full px-2 py-0 text-[0.68rem] font-normal">
                       {categoryLabel(memory.category)}
                     </Badge>
-                    <span className="text-[0.68rem] text-muted-foreground">
-                      {new Date(memory.createdAt).toLocaleDateString("fa-IR", {
-                        year: "numeric",
-                        month: "long",
-                        day: "numeric",
-                      })}
-                    </span>
+                    <span className="text-[0.68rem] text-muted-foreground">{formatDate(memory.createdAt, locale)}</span>
                   </div>
                 </div>
                 <Button
                   variant="ghost"
                   size="icon"
-                  aria-label="حذف این حافظه"
+                  aria-label={t("a11y.deleteMemory")}
                   className="h-8 w-8 shrink-0 text-muted-foreground hover:text-destructive"
                   onClick={() =>
                     removeMemory(memory.id).catch(() =>
-                      toast({ title: "حذف حافظه ناموفق بود", variant: "destructive" })
+                      toast({ title: t("memory.toast.deleteFailed"), variant: "destructive" })
                     )
                   }
                 >
@@ -148,9 +141,7 @@ export function MemoryPanel({ open, onOpenChange }: MemoryPanelProps) {
           )}
         </div>
 
-        <p className="text-[0.7rem] text-muted-foreground">
-          حافظه فقط با تأیید شما پر می‌شود و روی دستگاه شما ذخیره می‌ماند.
-        </p>
+        <p className="text-[0.7rem] text-muted-foreground">{t("memory.privacy")}</p>
       </DialogContent>
     </Dialog>
   );
