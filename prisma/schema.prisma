@@ -1,0 +1,74 @@
+// Xenon 1 AI — Database Schema (SQLite via Prisma)
+// پیکربندی داده‌های پلتفرم زنون ۱
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// پوشه‌های گفتگو
+model Folder {
+  id            String         @id @default(cuid())
+  name          String
+  color         String         @default("#8b5cf6")
+  createdAt     DateTime       @default(now())
+  conversations Conversation[]
+}
+
+// گفتگوها
+model Conversation {
+  id                String    @id @default(cuid())
+  title             String    @default("گفتگوی جدید")
+  folderId          String?
+  folder            Folder?   @relation(fields: [folderId], references: [id], onDelete: SetNull)
+  pinned            Boolean   @default(false)
+  mode              String    @default("general") // general | reasoning | coding | research
+  systemInstruction String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  messages          Message[]
+
+  @@index([updatedAt])
+  @@index([folderId])
+}
+
+// پیام‌ها
+model Message {
+  id             String       @id @default(cuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  role           String // user | assistant
+  content        String
+  thinking       String? // زنجیره استدلال (در صورت فعال بودن)
+  model          String? // پروفایل مسیریابی استفاده‌شده
+  servedModel    String? // مدل واقعی سروکننده از درگاه (شفافیت)
+  attachments    String? // JSON: [{id,name,type,size,url}]
+  sources        String? // JSON: [{url,name,snippet,host_name}] — منابع پژوهش
+  langWarning    Boolean      @default(false) // هشدار ناسازگاری زبانی (مثلا نویسه چینی ناخواسته)
+  createdAt      DateTime     @default(now())
+
+  @@index([conversationId, createdAt])
+}
+
+// حافظه پایدار (با تأیید کاربر)
+model Memory {
+  id        String   @id @default(cuid())
+  content   String
+  category  String   @default("general") // preference | fact | project | general
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// رویدادهای مصرف برای آمار و مشاهده‌پذیری
+model UsageEvent {
+  id        String   @id @default(cuid())
+  kind      String // chat | vision | tts | asr | image | search | memory
+  detail    String?
+  createdAt DateTime @default(now())
+
+  @@index([kind, createdAt])
+}
