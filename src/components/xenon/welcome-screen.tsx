@@ -69,7 +69,7 @@ export function WelcomeScreen() {
   };
 
   return (
-    <div className="xenon-scroll flex min-h-0 flex-1 flex-col overflow-y-auto">
+    <div className="xenon-scroll xenon-glow flex min-h-0 flex-1 flex-col overflow-y-auto">
       <motion.section
         initial={{ opacity: 0, y: 6 }}
         animate={{ opacity: 1, y: 0 }}
@@ -77,7 +77,7 @@ export function WelcomeScreen() {
         aria-label={t("a11y.welcome")}
         className="mx-auto flex min-h-full w-full max-w-2xl flex-col items-center justify-center px-4 py-8 text-center"
       >
-        <img src="/xenon-icon.svg" alt={t("a11y.xenonIcon")} className="h-11 w-11" />
+        <img src="/xenon-icon.svg" alt={t("a11y.xenonIcon")} className="h-11 w-11 drop-shadow-[0_0_18px_oklch(0.62_0.21_295/0.35)]" />
         <h1 className="mt-3 text-2xl font-bold tracking-tight">Xenon 1</h1>
         <p className="mt-1.5 text-center text-sm leading-6 text-muted-foreground">{t("welcome.tagline")}</p>
 
@@ -95,7 +95,7 @@ export function WelcomeScreen() {
               title={t(s.promptKey)}
               aria-label={t("a11y.suggestion", { prompt: t(s.promptKey) })}
               onClick={() => runSuggestion(s)}
-              className="inline-flex h-8 items-center gap-1.5 rounded-full border border-border/60 bg-background/50 px-3 text-xs text-muted-foreground transition-colors hover:border-primary/40 hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+              className="inline-flex h-8 items-center gap-1.5 rounded-full border border-border/60 bg-background/50 px-3 text-xs text-muted-foreground transition-all hover:border-primary/40 hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 active:scale-[0.98]"
             >
               <s.icon className="h-3.5 w-3.5 text-primary/80" aria-hidden />
               {t(s.labelKey)}

@@ -131,7 +131,7 @@ export function MessageItem({ message, isLastAssistant = false, onRegenerated }:
   if (isUser) {
     return (
       <article aria-label={t("a11y.yourMessage")} className="flex w-full flex-col items-start">
-        <div className="ms-auto max-w-[85%] rounded-xl bg-primary/15 px-3.5 py-2">
+        <div className="ms-auto max-w-[85%] rounded-2xl rounded-br-md border border-border/60 bg-accent/70 px-3.5 py-2">
           <div className="whitespace-pre-wrap break-words text-[0.85rem] leading-6" dir="auto">{message.content}</div>
         </div>
         {message.attachments && message.attachments.length > 0 ? (
@@ -276,7 +276,7 @@ export function MessageItem({ message, isLastAssistant = false, onRegenerated }:
             >
               <BookmarkPlus className="h-3.5 w-3.5" aria-hidden />
             </Button>
-            <span className="ms-1.5 truncate text-[0.65rem] text-muted-foreground/80" dir="auto">
+            <span className="xenon-mono ms-1.5 truncate text-muted-foreground/80" dir="auto">
               {profileLabel(profile, locale)}
               {message.servedModel ? ` · ${t("message.servedBy", { model: message.servedModel })}` : ""}
             </span>

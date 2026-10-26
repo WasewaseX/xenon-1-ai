@@ -71,9 +71,12 @@ function LanguageSwitcher() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
+        {/* suppressHydrationWarning: React 19.2/Next 16 dev 模式下 Radix 触发器自动生成的
+            useId 偶发路径差异（最终 DOM 一致、无功能影响）——仅屏蔽该良性告警 */}
         <Button
           variant="ghost"
           size="icon"
+          suppressHydrationWarning
           aria-label={t("a11y.changeLanguage")}
           className="h-8 w-8 text-muted-foreground hover:text-foreground"
         >
@@ -124,7 +127,7 @@ function Header({
 }: HeaderProps) {
   const t = useT();
   return (
-    <header className="flex h-12 shrink-0 items-center gap-1 border-b border-border/60 bg-background/80 px-2 backdrop-blur sm:gap-1.5 sm:px-3">
+    <header className="flex h-11 shrink-0 items-center gap-1 border-b border-border/50 bg-background/80 px-2 backdrop-blur sm:gap-1.5 sm:px-3">
       <Button
         variant="ghost"
         size="icon"
@@ -152,8 +155,8 @@ function Header({
 
       {activeTitle ? (
         <>
-          <span className="mx-1 hidden h-4 w-px shrink-0 bg-border/70 sm:block" aria-hidden />
-          <h2 className="min-w-0 flex-1 truncate text-sm text-muted-foreground" title={activeTitle}>
+          <span className="mx-1 hidden h-3.5 w-px shrink-0 bg-border/70 sm:block" aria-hidden />
+          <h2 className="min-w-0 flex-1 truncate text-[0.8rem] text-muted-foreground" title={activeTitle}>
             {activeTitle}
           </h2>
         </>
@@ -194,12 +197,12 @@ function StatusBar() {
   const locale = useLocale();
   const stats = useXenon((s) => s.stats);
   return (
-    <footer className="flex h-8 shrink-0 items-center gap-3 border-t border-border/60 px-3 text-[0.7rem] text-muted-foreground">
+    <footer className="flex h-8 shrink-0 items-center gap-3 border-t border-border/50 px-3 text-[0.7rem] text-muted-foreground">
       <span className="flex min-w-0 items-center gap-1.5">
         <span className="size-1.5 shrink-0 rounded-full bg-emerald-500" aria-hidden />
         <span className="truncate">
           {t("status.attribution")}{" "}
-          <span className="font-mono" dir="ltr">
+          <span className="xenon-mono" dir="ltr">
             (served: {SERVED_TEXT_MODEL})
           </span>
         </span>
@@ -214,7 +217,7 @@ function StatusBar() {
         <BookOpen className="size-3" aria-hidden />
         {t("status.library")}
       </a>
-      <span aria-live="polite" className="ms-auto hidden shrink-0 whitespace-nowrap sm:inline">
+      <span aria-live="polite" className="xenon-mono ms-auto hidden shrink-0 whitespace-nowrap tabular-nums sm:inline">
         {stats
           ? t("status.stats", {
               conversations: formatNumber(stats.conversations, locale),

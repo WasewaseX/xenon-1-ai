@@ -68,7 +68,10 @@ export async function PATCH(req: NextRequest, { params }: Params) {
   const data: Record<string, unknown> = {};
   if (typeof body.title === "string") data.title = body.title.trim().slice(0, 120) || "گفتگوی جدید";
   if (typeof body.pinned === "boolean") data.pinned = body.pinned;
-  if (typeof body.mode === "string" && ["general", "reasoning", "coding", "research"].includes(body.mode))
+  if (
+    typeof body.mode === "string" &&
+    ["general", "reasoning", "coding", "research", "agent"].includes(body.mode)
+  )
     data.mode = body.mode;
   if (body.folderId === null || typeof body.folderId === "string") data.folderId = body.folderId;
   if (body.systemInstruction === null || typeof body.systemInstruction === "string")

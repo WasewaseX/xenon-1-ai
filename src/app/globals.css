@@ -68,21 +68,22 @@
   --chart-3: oklch(0.398 0.07 227.392);
   --chart-4: oklch(0.828 0.189 84.429);
   --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: oklch(0.965 0.004 300);
+  --sidebar: oklch(0.968 0.003 300);
   --sidebar-foreground: oklch(0.16 0.01 300);
   --sidebar-primary: oklch(0.51 0.23 295);
   --sidebar-primary-foreground: oklch(0.985 0.005 300);
-  --sidebar-accent: oklch(0.93 0.01 300);
+  --sidebar-accent: oklch(0.935 0.008 300);
   --sidebar-accent-foreground: oklch(0.16 0.01 300);
   --sidebar-border: oklch(0.9 0.008 300);
   --sidebar-ring: oklch(0.51 0.23 295);
 }
 
-/* پالت تیرهٔ «Cursor-style»: بوم تقریباً سیاه (#0a0a0b)، سطوح تخت، خطوط مویی */
+/* پالت تیرهٔ «Cursor-style»: بوم تقریباً سیاه (#0a0a0b)، نوار کناری تیره‌تر از بوم،
+   سطوح تخت، خطوط مویی — مثل IDE. کارت کمی روشن‌تر از بوم برای لایهٔ نوشتار */
 .dark {
   --background: oklch(0.145 0.004 300);
   --foreground: oklch(0.95 0.005 300);
-  --card: oklch(0.178 0.006 300);
+  --card: oklch(0.172 0.006 300);
   --card-foreground: oklch(0.95 0.005 300);
   --popover: oklch(0.19 0.007 300);
   --popover-foreground: oklch(0.95 0.005 300);
@@ -90,9 +91,9 @@
   --primary-foreground: oklch(0.985 0.005 300);
   --secondary: oklch(0.23 0.01 300);
   --secondary-foreground: oklch(0.95 0.005 300);
-  --muted: oklch(0.22 0.008 300);
-  --muted-foreground: oklch(0.66 0.012 300);
-  --accent: oklch(0.24 0.01 300);
+  --muted: oklch(0.21 0.008 300);
+  --muted-foreground: oklch(0.68 0.012 300);
+  --accent: oklch(0.235 0.01 300);
   --accent-foreground: oklch(0.95 0.005 300);
   --destructive: oklch(0.66 0.19 22);
   --border: oklch(1 0 0 / 8%);
@@ -103,11 +104,11 @@
   --chart-3: oklch(0.769 0.188 70.08);
   --chart-4: oklch(0.627 0.265 303.9);
   --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.165 0.005 300);
+  --sidebar: oklch(0.128 0.004 300);
   --sidebar-foreground: oklch(0.95 0.005 300);
   --sidebar-primary: oklch(0.62 0.21 295);
   --sidebar-primary-foreground: oklch(0.985 0.005 300);
-  --sidebar-accent: oklch(1 0 0 / 5%);
+  --sidebar-accent: oklch(1 0 0 / 6%);
   --sidebar-accent-foreground: oklch(0.95 0.005 300);
   --sidebar-border: oklch(1 0 0 / 6%);
   --sidebar-ring: oklch(0.62 0.21 295);
@@ -265,4 +266,34 @@
 }
 .xenon-recording {
   animation: xenon-pulse-ring 1.5s infinite;
+}
+
+/* --- هالهٔ بنفش ملایم صفحهٔ خوش‌آمد (سبک Z.ai) --- */
+.xenon-glow {
+  position: relative;
+}
+.xenon-glow::before {
+  content: "";
+  position: absolute;
+  inset-inline: 0;
+  top: -4rem;
+  height: 18rem;
+  background: radial-gradient(
+    45rem 14rem ellipse at center,
+    oklch(0.62 0.21 295 / 0.09),
+    transparent 68%
+  );
+  pointer-events: none;
+  z-index: 0;
+}
+.xenon-glow > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* --- برچسب مونو برای متادیتای IDE-مانند --- */
+.xenon-mono {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.01em;
 }

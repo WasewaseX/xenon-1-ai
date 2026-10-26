@@ -382,6 +382,38 @@ export async function POST(req: NextRequest) {
       }
       planStep.done(shorten(goal, 100));
 
+      // --- گام ۱.۵: دسترسی ابری مستقیم — خواندن URLهایی که کاربر خودش پیست کرده ---
+      const URL_RE = /https?:\/\/[^\s<>"')\]]+/gi;
+      const userUrls = Array.from(new Set(userContent.match(URL_RE) ?? [])).slice(0, 2);
+      let pageContext = "";
+      for (const url of userUrls) {
+        if (Date.now() > deadline) break;
+        const host = hostOf(url);
+        const step = startAgentStep("read", `Reading ${host}`);
+        try {
+          const page = await pageReader(url);
+          if (!page || !page.text) {
+            step.done("unreadable");
+            continue;
+          }
+          if (!sources.some((s) => s.url === url)) {
+            sources.push({
+              url,
+              name: page.title || host,
+              snippet: shorten(page.text, 200),
+              host_name: host,
+              rank: sources.length + 1,
+            });
+          }
+          const idx = sources.findIndex((s) => s.url === url) + 1;
+          pageContext += `[S${idx}] ${page.title || host} — ${url}\n${page.text}\n\n`;
+          emit({ type: "sources", sources: [...sources] });
+          step.done(shorten(page.text, 80));
+        } catch {
+          step.done("read failed");
+        }
+      }
+
       // --- گام ۲: جست‌وجوهای وب (حداکثر ۳) ---
       for (const query of queries.slice(0, AGENT_MAX_SEARCHES)) {
         if (Date.now() > deadline) break;
@@ -400,10 +432,9 @@ export async function POST(req: NextRequest) {
         }
       }
 
-      // --- گام ۳: خواندن صفحه‌ها (حداکثر ۳، میزبان‌های متنوع) ---
+      // --- گام ۳: خواندن صفحه‌های نتیجهٔ جست‌وجو (حداکثر ۳، میزبان‌های متنوع) ---
       const alreadyRead = new Set<string>();
       const picked = pickPagesToRead(sources, AGENT_MAX_READS, alreadyRead);
-      let pageContext = "";
       for (const src of picked) {
         if (Date.now() > deadline) break;
         const host = src.host_name || hostOf(src.url);

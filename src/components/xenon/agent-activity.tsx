@@ -17,6 +17,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { cn } from "@/lib/utils";
 import { useLocale, useT } from "@/components/xenon/locale-provider";
 import { formatNumber } from "@/lib/xenon/i18n";
 import type { TranslationKey } from "@/lib/xenon/i18n";
@@ -45,19 +46,27 @@ function StepRow({ step }: { step: AgentStep }) {
 
   return (
     <li className="flex items-start gap-2 py-1">
-      <Icon className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary/80" aria-hidden />
+      <span
+        className={cn(
+          "mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-[6px] border border-border/60 bg-background/60",
+          done ? "text-muted-foreground" : "text-primary"
+        )}
+        aria-hidden
+      >
+        <Icon className="h-3 w-3" />
+      </span>
       <div className="min-w-0 flex-1">
-        <p className="text-xs leading-5 text-foreground/90">{labelKey ? t(labelKey) : step.title}</p>
+        <p className="text-xs font-medium leading-5 text-foreground/90">{labelKey ? t(labelKey) : step.title}</p>
         {detail ? (
-          <p className="truncate text-[0.7rem] leading-4 text-muted-foreground" dir="auto" title={detail}>
+          <p className="xenon-mono truncate leading-4 text-muted-foreground" dir="auto" title={detail}>
             {detail}
           </p>
         ) : null}
       </div>
       {done ? (
-        <Check className="mt-1 h-3.5 w-3.5 shrink-0 text-primary" aria-hidden />
+        <Check className="mt-1.5 h-3.5 w-3.5 shrink-0 text-primary" aria-hidden />
       ) : (
-        <Loader2 className="mt-1 h-3.5 w-3.5 shrink-0 animate-spin text-primary/70" aria-hidden />
+        <Loader2 className="mt-1.5 h-3.5 w-3.5 shrink-0 animate-spin text-primary/70" aria-hidden />
       )}
     </li>
   );
@@ -88,31 +97,30 @@ export function AgentActivity({ steps }: AgentActivityProps) {
     <Collapsible open={open} onOpenChange={setOpen} className="mb-2.5">
       <CollapsibleTrigger
         aria-label={open ? t("agent.hideActivity") : t("agent.showActivity")}
-        className="group/act inline-flex h-7 items-center gap-1.5 rounded-md px-1.5 text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+        className="group/act inline-flex h-7 max-w-full items-center gap-1.5 rounded-lg border border-border/60 bg-card/50 px-2 text-xs text-muted-foreground transition-colors hover:border-border hover:bg-card hover:text-foreground"
       >
         {running ? (
           <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" aria-hidden />
         ) : (
-          <Workflow className="h-3.5 w-3.5" aria-hidden />
+          <Workflow className="h-3.5 w-3.5 text-primary/80" aria-hidden />
         )}
-        <span>{t("agent.activity")}</span>
-        <span className="tabular-nums text-[0.65rem] opacity-70">
-          {t("agent.progress", {
-            done: formatNumber(doneCount, locale),
-            total: formatNumber(steps.length, locale),
-          })}
+        <span className="truncate">{t("agent.activity")}</span>
+        <span className="xenon-mono shrink-0 tabular-nums text-muted-foreground/70" dir="ltr">
+          {formatNumber(doneCount, locale)}/{formatNumber(steps.length, locale)}
         </span>
         <ChevronDown
-          className="h-3.5 w-3.5 transition-transform group-data-[state=open]/act:rotate-180"
+          className="h-3.5 w-3.5 shrink-0 transition-transform group-data-[state=open]/act:rotate-180"
           aria-hidden
         />
       </CollapsibleTrigger>
       <CollapsibleContent>
-        <ul className="xenon-scroll ms-1.5 mt-1 max-h-56 space-y-0.5 overflow-y-auto border-s border-border/70 ps-3">
-          {steps.map((step) => (
-            <StepRow key={step.id} step={step} />
-          ))}
-        </ul>
+        <div className="xenon-scroll mt-1.5 max-h-56 overflow-y-auto rounded-lg border border-border/50 bg-card/40 px-2.5 py-1">
+          <ul className="space-y-0.5">
+            {steps.map((step) => (
+              <StepRow key={step.id} step={step} />
+            ))}
+          </ul>
+        </div>
       </CollapsibleContent>
     </Collapsible>
   );

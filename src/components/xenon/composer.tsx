@@ -6,16 +6,18 @@
 
 import { useCallback, useEffect, useRef, useState, type ChangeEvent, type KeyboardEvent } from "react";
 import {
+  ArrowUp,
+  Bot,
   Brain,
   Check,
   ChevronDown,
   Code2,
   FileText,
+  Globe,
   ImageIcon,
   Loader2,
   Mic,
   Paperclip,
-  SendHorizontal,
   Sparkles,
   Square,
   Telescope,
@@ -47,12 +49,14 @@ const FILE_ACCEPT =
   "image/*,audio/*,.txt,.md,.json,.csv,.ts,.tsx,.js,.jsx,.py,.css,.html,.xml,.yml,.yaml";
 const MAX_TEXTAREA_HEIGHT = 184; // حدود ۷ سطر
 
-// آیکون پروفایل‌ها — به‌صورت پویا از ROUTING_PROFILES (شامل «عامل» پس از افزودن بک‌اند)
+// آیکون پروفایل‌ها — به‌صورت پویا از ROUTING_PROFILES (Bot = عامل، Globe = دسترسی ابری)
 const PROFILE_ICONS: Record<string, LucideIcon> = {
   Sparkles,
   Brain,
   Code2,
   Telescope,
+  Bot,
+  Globe,
 };
 
 export function ProfileGlyph({ name, className }: { name: string; className?: string }) {
@@ -203,8 +207,11 @@ function ModePill() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
+        {/* suppressHydrationWarning: 同 workspace.tsx 语言按钮——屏蔽 React 19.2 dev
+            模式下 Radix 自动 id 的良性水合告警 */}
         <button
           type="button"
+          suppressHydrationWarning
           aria-label={t("a11y.aiProfile")}
           className="inline-flex h-8 max-w-36 min-w-0 shrink items-center gap-1.5 rounded-lg border border-border/70 bg-background/40 px-2 text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-foreground sm:max-w-none"
         >
@@ -301,9 +308,13 @@ export function Composer({ embedded = false }: ComposerProps) {
   const handleSend = () => {
     if (!canSend) return;
     const value = draft.trim();
+    // پاک‌سازی فوری نوشتار مثل Cursor/Z.ai؛ در صورت خطا متن بازیابی می‌شود
+    setDraft("");
     sendMessage(value)
-      .catch(() => toast({ title: t("composer.toast.sendFailed"), variant: "destructive" }))
-      .finally(() => setDraft(""));
+      .catch(() => {
+        setDraft(value);
+        toast({ title: t("composer.toast.sendFailed"), variant: "destructive" });
+      });
   };
 
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
@@ -356,7 +367,7 @@ export function Composer({ embedded = false }: ComposerProps) {
           </div>
         )}
 
-        <div className="rounded-2xl border bg-card transition-colors focus-within:border-primary/50 focus-within:ring-2 focus-within:ring-primary/15">
+        <div className="rounded-2xl border border-border/80 bg-card transition-colors focus-within:border-primary/45 focus-within:ring-[3px] focus-within:ring-primary/15">
           <Textarea
             ref={areaRef}
             rows={1}
@@ -448,7 +459,7 @@ export function Composer({ embedded = false }: ComposerProps) {
                 <Button
                   variant="destructive"
                   size="icon"
-                  className="h-9 w-9 rounded-full"
+                  className="h-8 w-8 rounded-lg"
                   aria-label={t("a11y.stopGeneration")}
                   onClick={() => stopStreaming()}
                 >
@@ -457,7 +468,7 @@ export function Composer({ embedded = false }: ComposerProps) {
               ) : (
                 <Button
                   size="icon"
-                  className="h-9 w-9 shrink-0 rounded-full"
+                  className="h-8 w-8 shrink-0 rounded-lg shadow-sm"
                   aria-label={t("a11y.sendMessage")}
                   disabled={!canSend}
                   onClick={handleSend}
@@ -465,7 +476,7 @@ export function Composer({ embedded = false }: ComposerProps) {
                   {sending ? (
                     <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
                   ) : (
-                    <SendHorizontal className={cn("h-4 w-4", locale === "fa" && "-scale-x-100")} aria-hidden />
+                    <ArrowUp className="h-4 w-4" aria-hidden />
                   )}
                 </Button>
               )}

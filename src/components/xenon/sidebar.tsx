@@ -107,19 +107,19 @@ function ConversationRow({ conversation, active, folders, onOpen, onRenameReques
   return (
     <div
       className={cn(
-        "group/row flex items-center rounded-lg border-s-2 transition-colors",
+        "group/row flex items-center rounded-md transition-colors",
         active
-          ? "border-primary bg-sidebar-accent text-sidebar-accent-foreground"
-          : "border-transparent hover:bg-sidebar-accent/50"
+          ? "bg-sidebar-accent text-sidebar-accent-foreground"
+          : "border-transparent hover:bg-sidebar-accent/60"
       )}
     >
       <button
         type="button"
         onClick={onOpen}
         aria-current={active ? "true" : undefined}
-        className="flex h-9 min-w-0 flex-1 items-center gap-1.5 rounded-lg px-1.5 text-start text-[0.8rem]"
+        className="flex h-8 min-w-0 flex-1 items-center gap-1.5 rounded-md px-1.5 text-start text-[13px] leading-tight"
       >
-        {conversation.pinned ? <Pin className="h-3 w-3 shrink-0 text-primary" aria-hidden /> : null}
+        {conversation.pinned ? <Pin className="h-3 w-3 shrink-0 text-primary/90" aria-hidden /> : null}
         <span className="truncate">{conversation.title}</span>
       </button>
       <DropdownMenu>
@@ -197,12 +197,12 @@ function FolderRow(props: FolderRowProps) {
   const { folder, folders, conversations, activeId, expanded, onToggle } = props;
   return (
     <li>
-      <div className="group/frow flex items-center rounded-lg border-s-2 border-transparent transition-colors hover:bg-sidebar-accent/50">
+      <div className="group/frow flex items-center rounded-md transition-colors hover:bg-sidebar-accent/60">
         <button
           type="button"
           onClick={onToggle}
           aria-expanded={expanded}
-          className="flex h-9 min-w-0 flex-1 items-center gap-1.5 rounded-lg px-1.5 text-start text-[0.8rem]"
+          className="flex h-8 min-w-0 flex-1 items-center gap-1.5 rounded-md px-1.5 text-start text-[13px] leading-tight"
         >
           <svg
             viewBox="0 0 24 24"
@@ -426,9 +426,16 @@ export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   return (
     <div className="flex h-full min-h-0 flex-col bg-sidebar">
       <div className="space-y-2.5 p-2.5">
-        <Button className="h-9 w-full gap-2 rounded-lg text-[0.8rem] font-medium" onClick={handleNewChat}>
-          <Plus className="h-4 w-4" aria-hidden />
+        <Button
+          variant="outline"
+          className="h-9 w-full gap-2 rounded-lg border-border/70 bg-background/40 text-[0.8rem] font-medium hover:bg-sidebar-accent"
+          onClick={handleNewChat}
+        >
+          <Plus className="h-4 w-4 text-primary" aria-hidden />
           {t("sidebar.newChat")}
+          <kbd className="ms-auto hidden font-mono text-[0.62rem] text-muted-foreground/70 lg:inline" dir="ltr">
+            ⇧⌘O
+          </kbd>
         </Button>
         <div className="relative">
           <Search className="pointer-events-none absolute start-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" aria-hidden />

@@ -217,3 +217,73 @@ Work Log:
 
 Stage Summary:
 - Xenon 1 shipped: bilingual (EN/FA RTL) Z.ai/Cursor-style agent workspace; 5 modes (Core/Reasoning/Coder/Research/Agent); agent = multi-step web access (plan → ≤3 searches → ≤3 page reads → cited synthesis), steps persisted as xenon-steps-v1; stale-conversation self-heal; "The Ninth Vein" 110-page original novel PDF served at /novel/the-ninth-vein.pdf
+
+---
+Task ID: 2
+Agent: pdf-compiler (Task 2 — PDF compilation)
+Task: Compile the 23-chapter novel into public/novel/the-ninth-vein.pdf (≥100 pages)
+
+Work Log:
+- Loaded pdf skill; routed to Report/ReportLab production line (book = text-heavy, no emoji, all-Latin content)
+- Surveyed content/novel/*.md: 34,501 words, 23 files; only non-ASCII chars are em-dash (214) and middle dot (45); 2 *italic* spans (prologue, interlude-1); 15 scene-break lines ('---' / '· · ·'); no **bold** markers
+- Wrote /home/z/my-project/scripts/novel/build_pdf.py (sanitized via pdf.py code.sanitize): Digest page 5.5"×8.5" (396×612pt), Liberation Serif (registered as BookSerif 4-face family), body 10.5pt/15.4 leading (~1.47), justified + first-line indent + pyphen hyphenation, allowWidows/Orphans=0
+- Front matter: half-title → title page ("The Ninth Vein / A Novel of Ashkarad / Xenon 1 Library") → imprint ("© 2026 Xenon 1 Library. Original work — all characters and events fictional.") → About This Book (3 original paragraphs on the Nine Veins doctrine & Ashkarad) → Contents (clickable TableOfContents, 23 entries, leader dots, tableStyle padding zeroed so it fits one page)
+- TOC/pagination: BookDoc(BaseDocTemplate) afterFlowable notifies TOCEntry with folio (arabic, reset at body start) + bookmarkPage/addOutlineEntry; multiBuild (3 passes) — no hardcoded page numbers
+- Chapter openers: new page per section, letterspaced label (canvas charSpace), 19pt bold title, hairline rule, no running header on opener page; running headers elsewhere (even pages = THE NINTH VEIN, odd = chapter head, width-guarded); folios bottom-center 1..116
+- Parser: strips '# ', splits label/subtitle on em-dash, 'Chapter N' → 'Chapter One'-style words, XML-escapes then *x* → <i>x</i>, scene breaks → centered '· · ·' with CondPageBreak(70)
+- Fixed en route: Canvas has no setCharSpace (used drawString charSpace= kwarg); TOC spilled 1 entry to page 2 (Table default 3pt cell padding — zeroed via tableStyle)
+- QA: pypdf verify (pages/size/meta + TOC folio cross-check PASS); pdf.py font.check = 0 issues; toc.check = 0 errors; pdf_qa.py = WARN-only (scene-break '·' ornaments, p1 half-title not a cover, opener-page whitespace, TOC-clickable false positive — 46 direct /Dest links verified landing on correct opener pages via pypdf)
+
+Stage Summary:
+- Final PDF: public/novel/the-ninth-vein.pdf — 121 pages (pypdf-verified), 324,479 bytes (316.9 KB), digest 5.5×8.5in, fonts embedded, 23 PDF outline bookmarks, clickable TOC, folios 1–116
+- Structure: 5 front-matter pages (half-title/title/imprint/About/Contents) + 116 body pages; Prologue starts at folio 1 (physical p6)
+- Script: /home/z/my-project/scripts/novel/build_pdf.py (re-runnable, ~40s, reads content/novel/*.md in manifest order)
+- Key decisions: Liberation Serif over Times built-in (true italics + em-dash/middle-dot coverage); ReportLab-only build (no HTML cover — task spec defines front matter, not a graphic cover); honest page count from 10.5/1.47 typography — no filler pages needed
+- Constraints respected: src/ untouched, no dev server started/restarted, content/novel/*.md untouched
+
+---
+Task ID: 3
+Agent: main (Z.ai Code)
+Task: Fix UI bugs + redesign UI in Cursor/Z.ai agent style (bilingual EN/FA, RTL, violet preserved)
+
+Work Log:
+- Diagnosed PATCH /api/conversations/[id] returning 400 when switching to Agent mode: whitelist was ["general","reasoning","coding","research"] but ChatMode includes "agent" → added "agent" to the PATCH validator
+- Investigated recurring "1 Issue" hydration badge: React 19.2 useId path mismatch on Radix triggers (server `_R_2leatmlb_` vs client `_R_lbatmlb_`, LanguageSwitcher + Composer ModePill). Bisected empirically via minimal test pages: layout (ThemeProvider/LocaleProvider/Toaster), Sidebar+Sheet, framer-motion+WelcomeScreen+Composer, and Header replica are EACH internally consistent (0 errors); only the full composition flakes intermittently. Final DOM ids verified matching SSR (no functional impact, dev-only). Mitigation: suppressHydrationWarning on the two affected Radix triggers → badge gone, 3× reload stability verified (0 hydration errors, 0 console errors)
+- Redesign (Cursor/Z.ai style, violet kept): globals.css dark palette — sidebar darker than canvas (oklch 0.128 vs 0.145), flatter surfaces, tuned muted/accent; added .xenon-glow (subtle violet radial halo, opacity 0.09) and .xenon-mono utility
+- composer.tsx: send button → Cursor-style square rounded-lg with ArrowUp (was circular SendHorizontal); stop button matched; composer border/hairline focus ring refined; PROFILE_ICONS extended with Bot + Globe (Agent mode icon now renders as Bot, not Sparkles fallback); draft now clears immediately on send (Cursor/Z.ai behavior) and is restored on failure
+- sidebar.tsx: conversation/folder rows → compact Cursor-style (h-8, rounded-md, neutral highlight, no colored accent border); New chat → outline button with ⇧⌘O kbd hint
+- agent-activity.tsx: Cursor tool-call card style — bordered chip trigger with mono done/total counter, steps in bordered container with icon chips, mono detail lines
+- message-item.tsx: user bubble → neutral accent surface with hairline border (was violet tint); assistant meta line now mono
+- welcome-screen.tsx: xenon-glow halo + icon drop-shadow, chip press feedback
+- workspace.tsx: header h-11, tighter breadcrumb title, status bar mono metadata
+
+Stage Summary:
+- bun run lint clean; browser E2E all green: chat streaming + auto title, refresh persistence (23 convos), FA/RTL switch + SSR cookie persistence, Agent mode with cloud access, Ctrl+K / Ctrl+Shift+O shortcuts, mobile 390px layout, sticky footer intact
+- Final desktop + mobile screenshots verified; /novel/the-ninth-vein.pdf serves HTTP 200
+
+---
+Task ID: 4
+Agent: main (Z.ai Code)
+Task: Agent cloud-access enhancement — read URLs pasted by the user
+
+Work Log:
+- src/app/api/chat/route.ts runAgentResearch(): new step 1.5 before web searches — extracts up to 2 URLs from the user message (regex), reads each via pageReader, adds to sources with rank normalization, emits live "sources" events, records read steps (title "Reading <host>") and feeds page text into synthesis context as [Sn] blocks aligned with citation numbers
+- Existing pipeline already covered plan → multi-query search → diverse page reads → synthesis; user-pasted URLs now take priority (highest signal)
+- Verified in browser: agent message with a Wikipedia URL produced steps Planning/Reading (Black hole - Wikipedia)/Searching ×3, 9/9 progress, 11 source chips, inline citations [1][6]
+
+Stage Summary:
+- Agent mode now has true cloud access both ways: reads user-supplied URLs AND autonomously searches/reads the web, with live step timeline + cited synthesis
+
+---
+Task ID: 5
+Agent: main (Z.ai Code)
+Task: Browser E2E self-verification after UI redesign
+
+Work Log:
+- agent-browser: 1440×900 desktop + 390×844 mobile
+- Golden path: sent chat message (streamed, auto-titled "Gravity trap in space", sidebar highlight); switched to Agent mode and sent a URL task (steps + sources + citations verified in screenshots); reload → conversation/messages/agent-steps/mode fully persisted; language switch EN↔FA with dir=rtl mirror layout, Persian numerals, RTL composer/status bar; SSR cookie kept FA after reload; back to EN/LTR
+- Shortcuts: Ctrl+Shift+O opens new chat, Ctrl+K focuses sidebar search
+- Console: 0 errors after mitigation; 3× reload stability check passed
+
+Stage Summary:
+- All core flows verified in a real browser after redesign; no regressions to persistence, i18n/RTL, or streaming
