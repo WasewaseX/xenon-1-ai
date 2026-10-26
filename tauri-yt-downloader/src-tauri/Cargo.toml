@@ -1,0 +1,33 @@
+[package]
+name = "xenon-yt-downloader"
+version = "0.1.0"
+description = "Xenon YT Downloader — download YouTube video (MP4) or audio (MP3) via yt-dlp"
+authors = ["Xenon"]
+edition = "2021"
+rust-version = "1.77.2"
+
+# Tauri v2 expects a library crate (main.rs is a thin entry point).
+[lib]
+name = "xenon_yt_downloader"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-dialog = "2"
+tauri-plugin-fs = "2"
+tauri-plugin-shell = "2"
+
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tokio = { version = "1", features = ["full"] }
+thiserror = "2"
+
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = "s"
+panic = "abort"
+strip = true

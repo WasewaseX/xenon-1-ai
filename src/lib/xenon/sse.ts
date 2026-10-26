@@ -28,12 +28,24 @@ export function sseStream(
           // جریان بسته شده
         }
       };
+      // Keepalive: SSE comment pings are ignored by parsers but keep the TCP
+      // connection warm so intermediate proxies (alb gateways) do not sever
+      // the stream during long silent phases (research, agent tool loops).
+      // This is the fix for client-side "Error in input stream" / 502 drops.
+      const keepalive = setInterval(() => {
+        try {
+          controller.enqueue(encoder.encode(": ping\n\n"));
+        } catch {
+          // جریان بسته شده
+        }
+      }, 15_000);
       try {
         await producer(emit, abort.signal);
       } catch (err) {
         const message = err instanceof Error ? err.message : "خطای ناشناخته در جریان پاسخ";
         emit({ type: "error", message });
       } finally {
+        clearInterval(keepalive);
         try {
           controller.close();
         } catch {

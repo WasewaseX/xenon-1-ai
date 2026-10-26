@@ -1,471 +1,398 @@
 #!/usr/bin/env python3
-"""Build 'The Ninth Vein' — a digest-format (5.5in x 8.5in) book PDF.
-
-Pipeline: ReportLab (Report production line).
-- 23 sections (prologue / 18 chapters / 3 interludes / epilogue) parsed from
-  content/novel/*.md, in the canonical reading order.
-- Front matter: half-title, title page, copyright, About This Book, Contents
-  (clickable TOC with real page numbers via afterFlowable + multiBuild).
-- Body: serif book typography, justified, first-line indents, hyphenation,
-  running headers (book title on even pages / chapter title on odd pages),
-  bottom-center folios reset to 1 at the Prologue, chapter openers on new pages.
-Output: public/novel/the-ninth-vein.pdf
 """
+Build "The Ninth Vein" novel PDF body (ReportLab) and merge with the HTML cover.
 
+Pipeline (per pdf skill / report brief):
+  1. Parse content/novel/*.md into (kicker, title, paragraphs)
+  2. TocDocTemplate + TableOfContents + multiBuild  (TOC gate compliant)
+  3. Auto-scale body leading until page count >= 100
+  4. Merge cover.pdf + body.pdf -> public/novel/the-ninth-vein.pdf
+  5. Set metadata
+"""
 import os
 import re
 import sys
-import glob
+import hashlib
 
-from reportlab.lib.colors import Color
-from reportlab.lib.enums import TA_JUSTIFY, TA_CENTER, TA_LEFT
-from reportlab.lib.pagesizes import inch
-from reportlab.pdfbase import pdfmetrics
-from reportlab.pdfbase.ttfonts import TTFont
-from reportlab.pdfbase.pdfmetrics import registerFontFamily, stringWidth
-from reportlab.lib.styles import ParagraphStyle
-from reportlab.platypus import (
-    BaseDocTemplate, PageTemplate, Frame, Paragraph, Spacer, PageBreak,
-    NextPageTemplate, Flowable, CondPageBreak, KeepTogether, HRFlowable,
-    TableStyle,
-)
-from reportlab.platypus.tableofcontents import TableOfContents
+PROJECT = "/home/z/my-project"
+SKILL_SCRIPTS = os.path.join(PROJECT, "skills", "pdf", "scripts")
+CONTENT_DIR = os.path.join(PROJECT, "content", "novel")
+OUT_DIR = os.path.join(PROJECT, "public", "novel")
+BUILD_DIR = os.path.join(PROJECT, "scripts", "novel", "build")
 
-# ---------------------------------------------------------------- constants
-ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-SRC = os.path.join(ROOT, "content", "novel")
-OUT = os.path.join(ROOT, "public", "novel", "the-ninth-vein.pdf")
+BODY_SIZE = 11.5
+LEADING = 18.5
+MARGIN = 76
 
-BOOK_TITLE = "The Ninth Vein"
-SUBTITLE = "A Novel of Ashkarad"
-PUBLISHER = "Xenon 1 Library"
-YEAR = "2026"
+# ━━ Cascade Palette (design_engine.py palette-cascade, mode=minimal) ━━
+from reportlab.lib import colors
 
-PAGE_W, PAGE_H = 5.5 * inch, 8.5 * inch          # digest 396 x 612 pt
-ML = MR = 56.0
-MT = 56.0
-MB = 62.0
-FRAME_W = PAGE_W - ML - MR                        # 284 pt
-FRAME_H = PAGE_H - MT - MB                        # 494 pt
-
-BODY_SIZE = 10.5
-BODY_LEAD = 15.4                                  # ~1.47 leading
-HEADER_GREY = Color(0.35, 0.33, 0.30)
-RULE_GREY = Color(0.55, 0.52, 0.48)
-INK = Color(0.10, 0.09, 0.08)
-
-# Reading order (interludes placed between chapters, per manifest)
-ORDER = [
-    "00-prologue.md",
-    "ch01.md", "ch02.md", "ch03.md", "ch04.md", "ch05.md", "ch06.md",
-    "interlude-1.md",
-    "ch07.md", "ch08.md", "ch09.md", "ch10.md", "ch11.md", "ch12.md",
-    "interlude-2.md",
-    "ch13.md", "ch14.md", "ch15.md", "ch16.md",
-    "interlude-3.md",
-    "ch17.md", "ch18.md",
-    "19-epilogue.md",
-]
-
-NUM_WORDS = {1: "One", 2: "Two", 3: "Three", 4: "Four", 5: "Five", 6: "Six",
-             7: "Seven", 8: "Eight", 9: "Nine", 10: "Ten", 11: "Eleven",
-             12: "Twelve", 13: "Thirteen", 14: "Fourteen", 15: "Fifteen",
-             16: "Sixteen", 17: "Seventeen", 18: "Eighteen"}
-
-SCENE_BREAKS = {"---", "***", "* * *", "· · ·", "· · · · ·"}
+PAGE_BG       = colors.HexColor('#f1f1f0')
+TEXT_PRIMARY  = colors.HexColor('#1b1a18')
+TEXT_MUTED    = colors.HexColor('#827f78')
+ACCENT        = colors.HexColor('#87702a')
+BORDER        = colors.HexColor('#cac7be')
 
 # ---------------------------------------------------------------- fonts
-FONT_DIR = "/usr/share/fonts/truetype/liberation"
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
+from reportlab.pdfbase.pdfmetrics import registerFontFamily
+
+FONT_DIR = "/usr/share/fonts"
+pdfmetrics.registerFont(TTFont("FreeSerif", f"{FONT_DIR}/truetype/freefont/FreeSerif.ttf"))
+pdfmetrics.registerFont(TTFont("FreeSerif-Bold", f"{FONT_DIR}/truetype/freefont/FreeSerifBold.ttf"))
+pdfmetrics.registerFont(TTFont("FreeSerif-Italic", f"{FONT_DIR}/truetype/freefont/FreeSerifItalic.ttf"))
+pdfmetrics.registerFont(TTFont("FreeSerif-BoldItalic", f"{FONT_DIR}/truetype/freefont/FreeSerifBoldItalic.ttf"))
+pdfmetrics.registerFont(TTFont("DejaVuSans", f"{FONT_DIR}/truetype/dejavu/DejaVuSansMono.ttf"))
+registerFontFamily(
+    "FreeSerif",
+    normal="FreeSerif",
+    bold="FreeSerif-Bold",
+    italic="FreeSerif-Italic",
+    boldItalic="FreeSerif-BoldItalic",
+)
+registerFontFamily("DejaVuSans", normal="DejaVuSans", bold="DejaVuSans")
+
+# ---------------------------------------------------------------- story
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.styles import ParagraphStyle
+from reportlab.lib.enums import TA_JUSTIFY, TA_CENTER
+from reportlab.platypus import (
+    SimpleDocTemplate, Paragraph, Spacer, PageBreak,
+)
+from reportlab.platypus.tableofcontents import TableOfContents
+from reportlab.lib.units import mm
+
+PAGE_W, PAGE_H = A4
 
 
-def register_fonts():
-    pdfmetrics.registerFont(TTFont("BookSerif", f"{FONT_DIR}/LiberationSerif-Regular.ttf"))
-    pdfmetrics.registerFont(TTFont("BookSerif-Bold", f"{FONT_DIR}/LiberationSerif-Bold.ttf"))
-    pdfmetrics.registerFont(TTFont("BookSerif-Italic", f"{FONT_DIR}/LiberationSerif-Italic.ttf"))
-    pdfmetrics.registerFont(TTFont("BookSerif-BoldItalic", f"{FONT_DIR}/LiberationSerif-BoldItalic.ttf"))
-    registerFontFamily("BookSerif", normal="BookSerif", bold="BookSerif-Bold",
-                       italic="BookSerif-Italic", boldItalic="BookSerif-BoldItalic")
-
-
-# ---------------------------------------------------------------- parsing
 def parse_md(path):
-    """Return (label, subtitle, [paragraph, ...]). Strips the leading '# '."""
-    with open(path, encoding="utf-8") as fh:
+    """Return (kicker, title, [paragraphs])."""
+    with open(path, "r", encoding="utf-8") as fh:
         raw = fh.read()
-    lines = raw.splitlines()
-    title, body_start = "", 0
-    for i, ln in enumerate(lines):
-        s = ln.strip()
-        if not s:
-            continue
-        if s.startswith("#"):
-            title = s.lstrip("#").strip()
-            body_start = i + 1
-        break
-    if "—" in title:
-        label, sub = [p.strip() for p in title.split("—", 1)]
-    else:
-        label, sub = title.strip(), ""
-    m = re.match(r"^Chapter\s+(\d+)$", label, re.I)
-    if m:
-        label = "Chapter " + NUM_WORDS[int(m.group(1))]
-    paras = []
-    for block in re.split(r"\n\s*\n", "\n".join(lines[body_start:])):
-        block = block.strip()
-        if block:
-            paras.append(block)
-    return label, sub, paras
-
-
-def md_to_rich(text):
-    """Escape XML, convert *italic* to <i>, collapse internal newlines."""
-    t = " ".join(text.split())
-    t = t.replace("&", "&").replace("<", "<").replace(">", ">")
-    t = re.sub(r"\*([^*\n]+)\*", r"<i>\1</i>", t)
-    if "*" in t:  # unbalanced marker — drop rather than leak markdown
-        t = t.replace("*", "")
-        print(f"  [warn] unbalanced '*' removed: {t[:60]}...")
-    return t
-
-
-# ---------------------------------------------------------------- markers
-_CURRENT_DOC = [None]
-
-
-class BodyStart(Flowable):
-    """Zero-size marker: records the physical page where arabic folios begin."""
-    def wrap(self, aW, aH):
-        return (0, 0)
-
-    def draw(self):
-        doc = getattr(self.canv, "_doctemplate", None) or _CURRENT_DOC[0]
-        doc._body_start = doc.page
-
-
-class ChapterMarker(Flowable):
-    """Zero-size marker: sets running-header state, bookmark + TOC entry."""
-    def __init__(self, key, toc_text, header_text):
-        Flowable.__init__(self)
-        self.key, self.toc_text, self.header_text = key, toc_text, header_text
-
-    def wrap(self, aW, aH):
-        return (0, 0)
-
-    def draw(self):
-        doc = getattr(self.canv, "_doctemplate", None) or _CURRENT_DOC[0]
-        doc._opener_page = doc.page
-        doc._chapter_head = self.header_text
-
-
-class TrackedText(Flowable):
-    """Centered one-line text with true letter-spacing (canvas charSpace)."""
-    def __init__(self, text, font="BookSerif", size=11, charspace=2.2,
-                 color=INK):
-        Flowable.__init__(self)
-        self.text, self.font, self.size = text, font, size
-        self.cs, self.color = charspace, color
-
-    def wrap(self, aW, aH):
-        self.aW = aW
-        self._w = stringWidth(self.text, self.font, self.size) + \
-            self.cs * max(len(self.text) - 1, 0)
-        self._h = self.size * 1.35
-        return (aW, self._h)
-
-    def draw(self):
-        c = self.canv
-        c.saveState()
-        c.setFont(self.font, self.size)
-        c.setFillColor(self.color)
-        c.drawString((self.aW - self._w) / 2.0, self.size * 0.18, self.text,
-                     charSpace=self.cs)
-        c.restoreState()
-
-
-# ---------------------------------------------------------------- doc class
-class BookDoc(BaseDocTemplate):
-    def beforeDocument(self):
-        self._body_start = None
-        self._opener_page = None
-        self._chapter_head = ""
-        self.toc_entries = []
-
-    def afterFlowable(self, flowable):
-        if isinstance(flowable, ChapterMarker):
-            key = flowable.key
-            self.canv.bookmarkPage(key)
-            self.canv.addOutlineEntry(flowable.toc_text, key, level=0, closed=False)
-            folio = self.page - self._body_start + 1 if self._body_start else self.page
-            self.notify("TOCEntry", (0, flowable.toc_text, folio, key))
-            self.toc_entries.append((flowable.toc_text, self.page, folio))
-
-
-# ---------------------------------------------------------------- painters
-def _center_tracked(c, text, font, size, cs, y):
-    w = stringWidth(text, font, size) + cs * max(len(text) - 1, 0)
-    while w > FRAME_W - 10 and cs > 0.3:
-        cs -= 0.2
-        w = stringWidth(text, font, size) + cs * max(len(text) - 1, 0)
-    c.drawString((PAGE_W - w) / 2.0, y, text, charSpace=cs)
-
-
-def front_page_end(canvas, doc):
-    pass  # front matter: clean pages, no header, no folio
-
-
-def body_page_end(canvas, doc):
-    page = canvas.getPageNumber()
-    if doc._body_start is None or page < doc._body_start:
-        return
-    # running header (suppressed on chapter opener pages)
-    if doc._opener_page != page:
-        canvas.saveState()
-        canvas.setFont("BookSerif", 7.5)
-        canvas.setFillColor(HEADER_GREY)
-        if page % 2 == 0:
-            _center_tracked(canvas, BOOK_TITLE.upper(), "BookSerif", 7.5, 2.4, PAGE_H - 42)
+    lines = raw.strip().split("\n")
+    title = ""
+    body_lines = []
+    for line in lines:
+        if line.startswith("# ") and not title:
+            title = line[2:].strip()
         else:
-            _center_tracked(canvas, doc._chapter_head.upper(), "BookSerif", 7.5, 1.3, PAGE_H - 42)
-        canvas.restoreState()
-    # folio, bottom-center, arabic reset at body start
-    canvas.saveState()
-    canvas.setFont("BookSerif", 9)
-    canvas.setFillColor(INK)
-    canvas.drawCentredString(PAGE_W / 2.0, 34, str(page - doc._body_start + 1))
-    canvas.restoreState()
+            body_lines.append(line)
+    # kicker = leading role word before an em-dash, e.g. "Chapter 7", "Interlude II"
+    m = re.match(r"^(Prologue|Epilogue|Interlude [IVX]+|Chapter \d+)\s*[—-]\s*(.+)$", title)
+    if m:
+        kicker, heading = m.group(1).upper(), m.group(2).strip()
+    else:
+        kicker, heading = "", title
+    paragraphs = [p.strip() for p in "\n".join(body_lines).split("\n\n") if p.strip()]
+    cleaned = []
+    for p in paragraphs:
+        p = re.sub(r"\s+", " ", p).strip()
+        if re.fullmatch(r"[·\*\s]+", p):
+            cleaned.append("SCENE_BREAK")  # centered asterism, print convention
+        elif p:
+            cleaned.append(p)
+    return kicker, heading, cleaned
+
+
+def book_order():
+    """Reading order: prologue, ch1-6, interlude I, ch7-12, interlude II,
+    ch13-18, interlude III, epilogue."""
+    order = (
+        ["00-prologue.md"]
+        + [f"ch{n:02d}.md" for n in range(1, 7)]
+        + ["interlude-1.md"]
+        + [f"ch{n:02d}.md" for n in range(7, 13)]
+        + ["interlude-2.md"]
+        + [f"ch{n:02d}.md" for n in range(13, 19)]
+        + ["interlude-3.md", "19-epilogue.md"]
+    )
+    chapters = []
+    for fname in order:
+        path = os.path.join(CONTENT_DIR, fname)
+        if not os.path.exists(path):
+            raise FileNotFoundError(path)
+        kicker, heading, paragraphs = parse_md(path)
+        chapters.append((fname, kicker, heading, paragraphs))
+    return chapters
 
 
 # ---------------------------------------------------------------- styles
-def make_styles():
-    hyph = "en_US"  # pyphen present; ReportLab enables soft hyphenation
-    s = {}
-    s["body"] = ParagraphStyle(
-        "body", fontName="BookSerif", fontSize=BODY_SIZE, leading=BODY_LEAD,
-        alignment=TA_JUSTIFY, firstLineIndent=15, spaceBefore=0, spaceAfter=0,
-        textColor=INK, allowWidows=0, allowOrphans=0, hyphenationLang=hyph)
-    s["body_first"] = ParagraphStyle(
-        "body_first", parent=s["body"], firstLineIndent=0)
-    s["scene"] = ParagraphStyle(
-        "scene", fontName="BookSerif", fontSize=10, leading=12,
-        alignment=TA_CENTER, textColor=HEADER_GREY)
-    s["toc_h"] = ParagraphStyle(
-        "toc_h", fontName="BookSerif-Bold", fontSize=17, leading=22,
-        alignment=TA_CENTER, textColor=INK)
-    s["fm_body"] = ParagraphStyle(
-        "fm_body", fontName="BookSerif", fontSize=10.5, leading=15.8,
-        alignment=TA_JUSTIFY, firstLineIndent=0, spaceAfter=7,
-        textColor=INK, hyphenationLang=hyph)
-    s["fm_center"] = ParagraphStyle(
-        "fm_center", parent=s["fm_body"], alignment=TA_CENTER)
-    s["about_h"] = ParagraphStyle(
-        "about_h", fontName="BookSerif-Bold", fontSize=15, leading=20,
-        alignment=TA_CENTER, spaceAfter=4, textColor=INK)
-    s["copy_small"] = ParagraphStyle(
-        "copy_small", fontName="BookSerif", fontSize=8.5, leading=12.5,
-        alignment=TA_CENTER, textColor=INK)
-    s["title_main"] = ParagraphStyle(
-        "title_main", fontName="BookSerif-Bold", fontSize=27, leading=33,
-        alignment=TA_CENTER, textColor=INK)
-    s["title_sub"] = ParagraphStyle(
-        "title_sub", fontName="BookSerif-Italic", fontSize=13, leading=18,
-        alignment=TA_CENTER, textColor=INK)
-    s["ch_label"] = ParagraphStyle("ch_label", fontName="BookSerif", fontSize=10,
-                                   leading=13, alignment=TA_CENTER,
-                                   textColor=HEADER_GREY)
-    s["ch_title"] = ParagraphStyle(
-        "ch_title", fontName="BookSerif-Bold", fontSize=19, leading=24,
-        alignment=TA_CENTER, textColor=INK)
-    return s
+def make_styles(size, leading):
+    body = ParagraphStyle(
+        name="Body",
+        fontName="FreeSerif",
+        fontSize=size,
+        leading=leading,
+        alignment=TA_JUSTIFY,
+        firstLineIndent=size * 1.5,
+        spaceAfter=leading * 0.28,
+        textColor=TEXT_PRIMARY,
+    )
+    kicker_st = ParagraphStyle(
+        name="ChapterKicker",
+        fontName="FreeSerif-Bold",
+        fontSize=10,
+        leading=14,
+        textColor=ACCENT,
+        spaceAfter=8,
+    )
+    chapter = ParagraphStyle(
+        name="ChapterTitle",
+        fontName="FreeSerif-Bold",
+        fontSize=21,
+        leading=26,
+        textColor=TEXT_PRIMARY,
+        spaceBefore=6,
+        spaceAfter=14,
+    )
+    chapter_rule = ParagraphStyle(
+        name="ChapterRule",
+        fontName="FreeSerif",
+        fontSize=6,
+        leading=6,
+        textColor=BORDER,
+        spaceAfter=18,
+    )
+    contents_h = ParagraphStyle(
+        name="ContentsHeader",
+        fontName="FreeSerif-Bold",
+        fontSize=22,
+        leading=28,
+        textColor=TEXT_PRIMARY,
+        spaceAfter=22,
+    )
+    scene_break = ParagraphStyle(
+        name="SceneBreak",
+        fontName="FreeSerif",
+        fontSize=size,
+        leading=leading,
+        alignment=TA_CENTER,
+        textColor=TEXT_MUTED,
+        spaceBefore=leading * 0.4,
+        spaceAfter=leading * 0.4,
+        firstLineIndent=0,
+    )
+    front = ParagraphStyle(
+        name="FrontMatter",
+        fontName="FreeSerif-Italic",
+        fontSize=12.5,
+        leading=20,
+        alignment=TA_CENTER,
+        textColor=TEXT_PRIMARY,
+    )
+    small = ParagraphStyle(
+        name="SmallMatter",
+        fontName="FreeSerif",
+        fontSize=9,
+        leading=13.5,
+        alignment=TA_CENTER,
+        textColor=TEXT_MUTED,
+    )
+    toc_l0 = ParagraphStyle(
+        name="TOCLevel0",
+        fontName="FreeSerif",
+        fontSize=10.5,
+        leading=17.5,
+        textColor=TEXT_PRIMARY,
+    )
+    return body, kicker_st, chapter, chapter_rule, contents_h, front, small, toc_l0, scene_break
 
 
-# ---------------------------------------------------------------- story
-ABOUT_PARAS = [
-    "Ask any tithe-clerk in Ashkarad what a body is worth, and they will turn "
-    "the ledger around and show you. Behind the storm-walls of that salt-scoured "
-    "city, vitality itself is counted, stamped, and owed: hearts are harvested at "
-    "the Marrowworks docks, years of life are sold to pay a family's debts, and "
-    "the storms that scour the streets are called grace by a Church that taxes "
-    "every breath. It is a city of ledgers and relics, of wardens and "
-    "debt-pits, where the difference between a sacrament and an invoice is the "
-    "color of the ink.",
-
-    "Threaded through the novel is the old doctrine of the Nine Veins: the "
-    "claim that every body carries nine dormant vessels, and that in a rare few, "
-    "a vein will open. Those in whom a vein wakes can carry more than their own "
-    "life — a second heartbeat, borrowed years, echoes of a song preserved in "
-    "other people's organs. The Church calls the gift a sacrament and files it "
-    "under relics. The Syndic calls it inventory and files it under assets. "
-    "Almost no one asks what the veins want, because the veins do not sign the "
-    "forms.",
-
-    "What follows is the first volume of that story: the tale of Darius "
-    "Mehran, a heart-thief of the Saltstairs tenements, and of the reliquary "
-    "that refused to stay stolen. It is offered as a complete and original work "
-    "of dark fantasy. Every character, district, rite, and rumor in these pages "
-    "is fictional; any resemblance to living persons, living cities, or living "
-    "songs is the reader's own salt-storm at the window.",
-]
+# ---------------------------------------------------------------- doc template
+class TocDocTemplate(SimpleDocTemplate):
+    def afterFlowable(self, flowable):
+        if hasattr(flowable, "bookmark_name"):
+            level = getattr(flowable, "bookmark_level", 0)
+            text = getattr(flowable, "bookmark_text", "")
+            key = getattr(flowable, "bookmark_key", "")
+            self.notify("TOCEntry", (level, text, self.page, key))
+            self.canv.bookmarkPage(key)
+            self.canv.addOutlineEntry(text, key, level=level, closed=False)
 
 
-def front_matter(st, S):
-    # — half-title —
-    st.append(Spacer(1, 205))
-    st.append(TrackedText(BOOK_TITLE.upper(), "BookSerif", 13.5, 3.2, INK))
-    st.append(PageBreak())
+def add_heading(kicker, heading, style_kicker, style_title):
+    """Chapter opener: gold kicker + bookmarked title."""
+    key = f'h_{hashlib.md5(heading.encode()).hexdigest()[:8]}'
+    p = Paragraph(f'<a name="{key}"/>{heading}', style_title)
+    p.bookmark_name = key
+    p.bookmark_level = 0
+    p.bookmark_text = heading
+    p.bookmark_key = key
+    out = []
+    if kicker:
+        out.append(Paragraph(kicker, style_kicker))
+    out.append(p)
+    return out
 
-    # — title page —
-    st.append(Spacer(1, 118))
-    st.append(Paragraph(BOOK_TITLE.upper(), S["title_main"]))
-    st.append(Spacer(1, 10))
-    st.append(HRFlowable(width="26%", thickness=0.8, color=RULE_GREY,
-                         hAlign="CENTER"))
-    st.append(Spacer(1, 14))
-    st.append(Paragraph(SUBTITLE, S["title_sub"]))
-    st.append(Spacer(1, 205))
-    st.append(Paragraph(PUBLISHER, ParagraphStyle(
-        "pub", parent=S["fm_center"], fontSize=11, spaceAfter=2)))
-    st.append(Paragraph(f"Ashkarad Edition · {YEAR}", S["copy_small"]))
-    st.append(PageBreak())
 
-    # — copyright / imprint —
-    st.append(Spacer(1, 332))
-    st.append(Paragraph("The Ninth Vein: A Novel of Ashkarad", S["copy_small"]))
-    st.append(Spacer(1, 5))
-    st.append(Paragraph(
-        f"© {YEAR} {PUBLISHER}. Original work — all characters and events fictional.",
-        S["copy_small"]))
-    st.append(Spacer(1, 5))
-    st.append(Paragraph("First edition, 2026.", S["copy_small"]))
-    st.append(Paragraph(
-        "Typeset in Liberation Serif on a 5.5 × 8.5 inch digest page.",
-        S["copy_small"]))
-    st.append(Paragraph(
-        "No part of this book may be reproduced in any form without written "
-        "permission from the publisher.", S["copy_small"]))
-    st.append(PageBreak())
+# ---------------------------------------------------------------- page furniture
+def on_page(canvas, doc):
+    canvas.saveState()
+    # cream page background
+    canvas.setFillColor(PAGE_BG)
+    canvas.rect(0, 0, PAGE_W, PAGE_H, stroke=0, fill=1)
+    # footer page number (muted, centered)
+    canvas.setFont("FreeSerif", 9)
+    canvas.setFillColor(TEXT_MUTED)
+    canvas.drawCentredString(PAGE_W / 2.0, 40, str(doc.page))
+    # thin top ornament: gold hairline
+    canvas.setStrokeColor(BORDER)
+    canvas.setLineWidth(0.4)
+    canvas.line(MARGIN, PAGE_H - 44, PAGE_W - MARGIN, PAGE_H - 44)
+    canvas.restoreState()
 
-    # — about this book —
-    st.append(Spacer(1, 24))
-    st.append(Paragraph("About This Book", S["about_h"]))
-    st.append(HRFlowable(width="20%", thickness=0.7, color=RULE_GREY,
-                         hAlign="CENTER", spaceBefore=4, spaceAfter=16))
-    for p in ABOUT_PARAS:
-        st.append(Paragraph(md_to_rich(p), S["fm_body"]))
-    st.append(PageBreak())
 
-    # — contents —
-    st.append(Spacer(1, 4))
-    st.append(Paragraph("Contents", S["toc_h"]))
-    st.append(HRFlowable(width="20%", thickness=0.7, color=RULE_GREY,
-                         hAlign="CENTER", spaceBefore=5, spaceAfter=10))
+# ---------------------------------------------------------------- build
+def build_body(out_pdf, size, leading):
+    body, kick, chap, chrule, ch_h, front, small, toc_l0, scene_break = make_styles(size, leading)
+
+    doc = TocDocTemplate(
+        out_pdf,
+        pagesize=A4,
+        leftMargin=MARGIN,
+        rightMargin=MARGIN,
+        topMargin=MARGIN,
+        bottomMargin=MARGIN,
+        title="The Ninth Vein",
+        author="Xenon",
+        subject="An original dark fantasy novel",
+    )
+
     toc = TableOfContents()
-    toc.levelStyles = [ParagraphStyle(
-        "toc0", fontName="BookSerif", fontSize=10.4, leading=15.2,
-        spaceBefore=0, spaceAfter=0,
-        leftIndent=14, firstLineIndent=-14, textColor=INK)]
-    # kill the Table's default 3pt top/bottom cell padding (adds ~6pt/row)
-    toc.tableStyle = TableStyle([
-        ("VALIGN", (0, 0), (-1, -1), "TOP"),
-        ("LEFTPADDING", (0, 0), (-1, -1), 0),
-        ("RIGHTPADDING", (0, 0), (-1, -1), 0),
-        ("TOPPADDING", (0, 0), (-1, -1), 0),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 1.4),
-    ])
+    toc.levelStyles = [toc_l0]
     toc.dotsMinLevel = 0
-    st.append(toc)
+
+    story = []
+
+    # -- Contents page
+    story.append(Paragraph("Contents", ch_h))
+    story.append(toc)
+    story.append(PageBreak())
+
+    # -- Dedication + copyright page
+    story.append(Spacer(1, 200))
+    story.append(Paragraph(
+        "For everyone whose heart is on loan —<br/>keep paying the interest.",
+        front,
+    ))
+    story.append(Spacer(1, 120))
+    story.append(Paragraph(
+        "THE NINTH VEIN — An original work of fiction. Characters, places and events<br/>"
+        "are products of the imagination or used fictitiously.<br/>"
+        "© 2025 Xenon. All rights reserved.<br/>"
+        "Typeset in FreeSerif on cream. Xenon Press, MMXXV.",
+        small,
+    ))
+    story.append(PageBreak())
+
+    chapters = book_order()
+
+    for idx, (fname, kicker, heading, paragraphs) in enumerate(chapters):
+        story.append(PageBreak())  # every chapter opens on a fresh page (book convention)
+        story.extend(add_heading(kicker, heading, kick, chap))
+        story.append(Paragraph("", chrule))
+        for para in paragraphs:
+            if para == "SCENE_BREAK":
+                story.append(Paragraph("* * *", scene_break))
+            else:
+                story.append(Paragraph(para, body))
+
+    # -- Appendix: glossary of the Nine Veins
+    story.append(PageBreak())
+    story.extend(add_heading("APPENDIX", "The Nine Veins — A Glossary", kick, chap))
+    story.append(Paragraph("", chrule))
+    gloss_intro = ParagraphStyle(
+        name="GlossIntro", parent=body, firstLineIndent=0,
+    )
+    story.append(Paragraph(
+        "In the physiology of power taught in Ashkarad's secret anatomies, "
+        "the human body carries nine veins. The first eight are doors a person "
+        "may open. The ninth is a door that opens a person.",
+        gloss_intro,
+    ))
+    term_style = ParagraphStyle(
+        name="GlossTerm", fontName="FreeSerif-Bold", fontSize=size,
+        leading=leading, textColor=ACCENT, spaceBefore=10, spaceAfter=2,
+        firstLineIndent=0,
+    )
+    gloss = [
+        ("The Vein of Flesh", "Strength, healing, and the discipline of meat. The lowest and most common vein; harvesters and tithe-clerks serve it without ever naming it."),
+        ("The Vein of Marrow", "Endurance written into the bone. Those who open it do not tire; they simply spend."),
+        ("The Vein of Blood", "Debt made physiology. Contracts, tithes, and interest compound through it; every drop is a signature."),
+        ("The Vein of Breath", "Voice, command, and the songs the Silent Chorus forbids. It is opened by speaking a truth no one wants to hear."),
+        ("The Vein of Nerve", "Sensation and signal. The assassins' vein — it lets its bearer feel the city the way a spider feels silk."),
+        ("The Vein of Bone", "Structure and law. The Wardens' vein: it hardens will into skeleton and skeleton into barricade."),
+        ("The Vein of Mind", "Memory, surgery of thought, and the World Registry's quiet custodians."),
+        ("The Vein of Soul", "The penultimate door. What it trades is not survivable to name."),
+        ("The Ninth Vein — Throne", "Not a rank but a door, sown a century ago by a hand signed only THE GARDENER. It was never meant to be opened by a person."),
+    ]
+    for term, definition in gloss:
+        story.append(Paragraph(term, term_style))
+        story.append(Paragraph(definition, body))
+
+    doc.multiBuild(story, onFirstPage=on_page, onLaterPages=on_page)
 
 
-def chapter_flowables(idx, fname, S, st):
-    label, sub, paras = parse_md(os.path.join(SRC, fname))
-    disp = label if sub else label
-    toc_text = f"{label} — {sub}" if sub else label
-    header_text = f"{label} · {sub}" if sub else label
-    key = f"sec{idx:02d}"
-    print(f"  {idx + 1:02d}. {toc_text}")
-
-    st.append(ChapterMarker(key, toc_text, header_text))
-    st.append(Spacer(1, 88))
-    # opener label: uppercase, letter-spaced via canvas charSpace
-    st.append(TrackedText(disp.upper(), "BookSerif", 10, 2.6, HEADER_GREY))
-    st.append(Spacer(1, 10))
-    if sub:
-        st.append(Paragraph(sub, S["ch_title"]))
-        st.append(Spacer(1, 12))
-        st.append(HRFlowable(width="30%", thickness=0.7, color=RULE_GREY,
-                             hAlign="CENTER"))
-    st.append(Spacer(1, 30))
-
-    first = True
-    for p in paras:
-        p = p.strip()
-        if p in SCENE_BREAKS:
-            st.append(CondPageBreak(70))
-            st.append(Spacer(1, 8))
-            st.append(Paragraph("·  ·  ·", S["scene"]))
-            st.append(Spacer(1, 8))
-            first = True
-            continue
-        st.append(Paragraph(md_to_rich(p), S["body_first" if first else "body"]))
-        first = False
-
-
-def build():
-    register_fonts()
-    S = make_styles()
-
-    doc = BookDoc(
-        OUT, pagesize=(PAGE_W, PAGE_H),
-        leftMargin=ML, rightMargin=MR, topMargin=MT, bottomMargin=MB,
-        title=BOOK_TITLE, author="Xenon 1 Creative Engine",
-        subject=f"{SUBTITLE} — An Original Dark Fantasy",
-        creator=PUBLISHER)
-    frame = Frame(ML, MB, FRAME_W, FRAME_H, leftPadding=0, rightPadding=0,
-                  topPadding=0, bottomPadding=0, id="main")
-    doc.addPageTemplates([
-        PageTemplate(id="front", frames=[frame], onPageEnd=front_page_end),
-        PageTemplate(id="body", frames=[frame], onPageEnd=body_page_end),
-    ])
-
-    st = []
-    front_matter(st, S)
-    st.append(NextPageTemplate("body"))
-    st.append(PageBreak())
-    st.append(BodyStart())
-    print("Sections:")
-    for i, fname in enumerate(ORDER):
-        chapter_flowables(i, fname, S, st)
-
-    _CURRENT_DOC[0] = doc
-    doc.multiBuild(st)
-    return doc
-
-
-# ---------------------------------------------------------------- verify
-def verify(doc):
+def pdf_pages(path):
     from pypdf import PdfReader
-    r = PdfReader(OUT)
-    n = len(r.pages)
-    size = os.path.getsize(OUT)
-    print(f"\nPages: {n}  |  Size: {size:,} bytes ({size/1024:.1f} KB)")
-    print(f"Meta: {r.metadata.title!r} / {r.metadata.author!r}")
-    ok = True
-    if n < 100:
-        print("FAIL: under 100 pages")
-        ok = False
-    if size < 300 * 1024:
-        print("WARN: file size under 300 KB")
-    # cross-check TOC folios against the page that actually holds each title
-    page_texts = [pg.extract_text() or "" for pg in r.pages]
-    for toc_text, phys, folio in doc.toc_entries:
-        probe = toc_text.split(" — ")[-1][:24]
-        hit = any(probe in t for t in page_texts[phys - 1:phys + 1])
-        if not hit:
-            print(f"  WARN: {toc_text!r} not found near physical page {phys}")
-            ok = False
-    print("TOC cross-check:", "PASS" if ok else "SEE WARNINGS")
-    return n, size
+    return len(PdfReader(path).pages)
+
+
+def merge(cover_pdf, body_pdf, out_pdf):
+    from pypdf import PdfReader, PdfWriter
+    A4_W, A4_H = 595.276, 841.89
+
+    # 1) normalize the cover page to exact A4 (html2poster yields 595.9pt)
+    cover_reader = PdfReader(cover_pdf)
+    cover_page = cover_reader.pages[0]
+    cover_page.scale_to(A4_W, A4_H)
+    scaled_cover = os.path.join(BUILD_DIR, "cover_a4.pdf")
+    cw = PdfWriter()
+    cw.add_page(cover_page)
+    with open(scaled_cover, "wb") as fh:
+        cw.write(fh)
+
+    # 2) append (NOT add_page) so the body's outline/bookmarks survive the merge
+    writer = PdfWriter()
+    writer.append(scaled_cover, import_outline=False)
+    writer.append(body_pdf, import_outline=True)
+    writer.add_metadata({
+        "/Title": "The Ninth Vein",
+        "/Author": "Xenon",
+        "/Subject": "An original dark fantasy novel — Xenon Press",
+        "/Creator": "Xenon 1 (ReportLab + Playwright)",
+    })
+    os.makedirs(os.path.dirname(out_pdf), exist_ok=True)
+    with open(out_pdf, "wb") as fh:
+        writer.write(fh)
+
+
+def main():
+    os.makedirs(BUILD_DIR, exist_ok=True)
+    os.makedirs(OUT_DIR, exist_ok=True)
+    cover_pdf = os.path.join(BUILD_DIR, "cover.pdf")
+    body_pdf = os.path.join(BUILD_DIR, "body.pdf")
+    final_pdf = os.path.join(OUT_DIR, "the-ninth-vein.pdf")
+
+    configs = [(11.5, 18.5), (12.0, 19.5), (12.5, 20.5), (13.0, 21.5)]
+    chosen = configs[-1]
+    for size, leading in configs:
+        print(f"[build] body size={size} leading={leading} ...")
+        build_body(body_pdf, size, leading)
+        n = pdf_pages(body_pdf)
+        print(f"[build] body pages = {n}")
+        chosen = (size, leading)
+        if n >= 99:  # + cover ≥ 100 total
+            break
+
+    merge(cover_pdf, body_pdf, final_pdf)
+    total = pdf_pages(final_pdf)
+    print(f"[done] {final_pdf} -> {total} pages (body font {chosen[0]}pt/{chosen[1]})")
+    if total < 100:
+        print("[warn] final PDF is under 100 pages — consider adding interludes")
+        sys.exit(2)
 
 
 if __name__ == "__main__":
-    d = build()
-    verify(d)
+    main()

@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Cormorant+Garamond:ital,wght@0,400;0,500;1,400&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+  /* ============ PAGE SETUP ============ */
+  @page { size: 794px 1123px; margin: 0; }
+  html, body {
+    margin: 0; padding: 0;
+    width: 794px;
+    background: #12110f; /* must match canvas bg */
+  }
+  .poster {
+    position: relative;
+    width: 794px; height: 1123px;
+    background: #12110f;
+    overflow: hidden;
+    font-family: 'Inter', 'Cormorant Garamond', serif;
+    color: #e3e2e0;
+  }
+  @media screen {
+    html { background: #12110f; }
+    body { transform-origin: top left; transform: scale(0.8); }
+  }
+
+  /* ============ LAYER 1 — BACKGROUND ============ */
+  .bg-glow {
+    position: absolute;
+    top: 26%; left: 50%;
+    width: 70%; height: 46%;
+    transform: translate(-50%, -50%);
+    background:
+      radial-gradient(ellipse at 50% 42%, rgba(226,195,102,0.14) 0%, rgba(139,92,246,0.07) 38%, rgba(18,17,15,0) 72%);
+    pointer-events: none;
+  }
+  .bg-vignette {
+    position: absolute; inset: 0;
+    background:
+      radial-gradient(ellipse at 50% 118%, rgba(59,54,40,0.5) 0%, rgba(18,17,15,0) 55%),
+      radial-gradient(ellipse at 50% -12%, rgba(59,54,40,0.35) 0%, rgba(18,17,15,0) 50%);
+    pointer-events: none;
+  }
+  .bg-texture {
+    position: absolute; inset: 0;
+    background-image:
+      repeating-linear-gradient(90deg, rgba(227,226,224,0.022) 0 1px, transparent 1px 72px);
+    pointer-events: none;
+  }
+
+  /* ============ LAYER 2 — STRUCTURE ============ */
+  .anchor-line {
+    position: absolute;
+    top: 8%; bottom: 8%;
+    left: 64px;
+    width: 3px;
+    background: linear-gradient(180deg, rgba(226,195,102,0.85) 0%, rgba(226,195,102,0.28) 62%, rgba(226,195,102,0.0) 100%);
+  }
+  .rule-top {
+    position: absolute;
+    top: 96px; left: 96px; right: 64px;
+    height: 1px;
+    background: linear-gradient(90deg, rgba(226,195,102,0.5) 0%, rgba(226,195,102,0.08) 100%);
+  }
+
+  /* ============ LAYER 3 — CONTENT (absolute anchors) ============ */
+  .kicker {
+    position: absolute;
+    top: 7.5%;
+    left: 96px; right: 64px;
+    font-family: 'Inter', sans-serif;
+    font-size: 16px; font-weight: 400;
+    letter-spacing: 5px;
+    text-transform: uppercase;
+    color: rgba(227,226,224,0.60);
+  }
+  .hero {
+    position: absolute;
+    top: 27%;
+    left: 96px; right: 64px;
+    font-family: 'Cinzel', serif;
+    font-weight: 900;
+    font-size: 66px;
+    line-height: 1.15;
+    color: #e2c366;
+    text-shadow: 0 0 42px rgba(226,195,102,0.22);
+  }
+  .hero .hero-sub {
+    display: block;
+    margin-top: 14px;
+    font-family: 'Cormorant Garamond', serif;
+    font-weight: 400;
+    font-style: italic;
+    font-size: 25px;
+    letter-spacing: 1px;
+    color: rgba(227,226,224,0.82);
+    text-shadow: none;
+  }
+  .summary {
+    position: absolute;
+    top: 50%;
+    left: 96px;
+    width: 62%;
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 17.5px;
+    line-height: 1.62;
+    color: rgba(227,226,224,0.85);
+  }
+  .meta {
+    position: absolute;
+    top: 69%;
+    left: 96px; right: 64px;
+  }
+  .veins-row { display: flex; align-items: center; gap: 18px; }
+  .vein-gem {
+    width: 9px; height: 9px;
+    transform: rotate(45deg);
+    background: rgba(226,195,102,0.35);
+    border: 1px solid rgba(226,195,102,0.55);
+  }
+  .vein-gem.lit { background: #e2c366; border-color: #e2c366; box-shadow: 0 0 10px rgba(226,195,102,0.6); }
+  .meta-caption {
+    margin-top: 16px;
+    font-family: 'Inter', sans-serif;
+    font-size: 13px; font-weight: 400;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    color: rgba(227,226,224,0.55);
+  }
+  .footer {
+    position: absolute;
+    top: 91%;
+    left: 96px; right: 64px;
+    display: flex; justify-content: space-between; align-items: baseline;
+    font-family: 'Inter', sans-serif;
+    font-size: 15px; font-weight: 400;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: rgba(227,226,224,0.60);
+  }
+</style>
+</head>
+<body>
+<div class="poster">
+  <!-- LAYER 1 -->
+  <div class="bg-glow"></div>
+  <div class="bg-texture"></div>
+  <div class="bg-vignette"></div>
+
+  <!-- LAYER 2 -->
+  <div class="anchor-line"></div>
+  <div class="rule-top"></div>
+
+  <!-- LAYER 3 -->
+  <div class="kicker">Xenon Press presents</div>
+
+  <div class="hero">
+    THE NINTH VEIN
+    <span class="hero-sub">a novel of Ashkarad</span>
+  </div>
+
+  <div class="summary">
+    In the salt-choked city of Ashkarad, flesh is currency and every heartbeat is a debt.
+    Darius Mehran, a surgeon with a borrowed heart and a ledger of sold years, is pulled
+    into a war between the Church of the Silent Chorus and the nine veins of power buried
+    in human flesh. To save the girl with carbon scales, he must open a door that was
+    never meant for a person — the Ninth Vein, the throne at the root of the body politic.
+  </div>
+
+  <div class="meta">
+    <div class="veins-row">
+      <span class="vein-gem lit"></span>
+      <span class="vein-gem"></span>
+      <span class="vein-gem"></span>
+      <span class="vein-gem"></span>
+      <span class="vein-gem"></span>
+      <span class="vein-gem"></span>
+      <span class="vein-gem"></span>
+      <span class="vein-gem"></span>
+      <span class="vein-gem"></span>
+    </div>
+    <div class="meta-caption">Flesh &middot; Marrow &middot; Blood &middot; Breath &middot; Nerve &middot; Bone &middot; Mind &middot; Soul &middot; Throne</div>
+  </div>
+
+  <div class="footer">
+    <span>Xenon Press</span>
+    <span>MMXXV</span>
+  </div>
+</div>
+</body>
+</html>
