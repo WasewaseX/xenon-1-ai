@@ -219,7 +219,7 @@ const en = {
 
   // نوار وضعیت
   "status.attribution": "Powered by GLM via the Z.ai API",
-  "status.library": "Library: The Ninth Vein (PDF)",
+  "status.library": "Library: The Ninth Vein — 100-Chapter Edition (PDF)",
   "status.stats": "{conversations} chats · {messages} messages · {memories} memories",
   "status.loading": "…",
 
@@ -431,7 +431,7 @@ const fa: Record<TranslationKey, string> = {
   "agent.step.synthesize": "تولید پاسخ",
 
   "status.attribution": "قدرت‌گرفته از GLM از طریق API زی‌ای‌آی",
-  "status.library": "کتابخانه: نهمین رگ (PDF)",
+  "status.library": "کتابخانه: نهمین رگ — نسخهٔ کامل ۱۰۰ فصلی (PDF)",
   "status.stats": "{conversations} گفتگو · {messages} پیام · {memories} حافظه",
   "status.loading": "…",
 
