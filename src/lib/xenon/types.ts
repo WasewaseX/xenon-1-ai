@@ -36,6 +36,7 @@ export interface MessageDTO {
   langWarning?: boolean;
   createdAt: string;
   streaming?: boolean; // فقط در کلاینت
+  interrupted?: boolean; // فقط در کلاینت — جریان وسط پاسخ قطع شده
 }
 
 export interface ConversationDTO {

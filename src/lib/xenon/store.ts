@@ -4,6 +4,7 @@
 import { create } from "zustand";
 import { toast } from "@/hooks/use-toast";
 import * as api from "./api";
+import { StreamInterruptedError, StreamStartError } from "./api";
 import { translateNow } from "./i18n";
 import type { AgentStep, MessageWithSteps, XenonStepEvent } from "./steps";
 import type {
@@ -37,6 +38,15 @@ interface XenonState {
   imageGenMode: boolean;
   speakingId: string | null;
 
+  /** آخرین ارسال ناموفق — برای دکمهٔ «تلاش دوباره» بدون از دست رفتن پیام */
+  lastFailed: {
+    content: string;
+    mode: ChatMode;
+    regenerate: boolean;
+    userId: string;
+    assistantId: string;
+  } | null;
+
   // اکشن‌ها
   bootstrap: () => Promise<void>;
   refreshSidebar: () => Promise<void>;
@@ -49,6 +59,8 @@ interface XenonState {
   sendMessage: (content: string) => Promise<void>;
   stopStreaming: () => void;
   regenerate: () => Promise<void>;
+  retryLast: () => Promise<void>;
+  clearLastFailed: () => void;
   editAndResend?: never; // رزرو
 
   addAttachment: (a: AttachmentMeta) => void;
@@ -108,6 +120,14 @@ function finalizeSteps(stepMap: Map<string, AgentStep>): AgentStep[] | null {
   return [...stepMap.values()];
 }
 
+/** دسته‌بندی خطای جریان — هرگز متن خام مرورگر (NetworkError و امثال آن) به کاربر نشان داده نمی‌شود */
+function classifyStreamFailure(err: unknown): "aborted" | "interrupted" | "start" | "generic" {
+  if (err instanceof DOMException && err.name === "AbortError") return "aborted";
+  if (err instanceof StreamInterruptedError) return "interrupted";
+  if (err instanceof StreamStartError) return "start";
+  return "generic";
+}
+
 export const useXenon = create<XenonState>((set, get) => ({
   conversations: [],
   folders: [],
@@ -125,6 +145,7 @@ export const useXenon = create<XenonState>((set, get) => ({
   attachments: [],
   imageGenMode: false,
   speakingId: null,
+  lastFailed: null,
 
   bootstrap: async () => {
     set({ loadingSidebar: true });
@@ -329,9 +350,11 @@ export const useXenon = create<XenonState>((set, get) => ({
                   break;
                 }
                 case "error":
+                  // پیام خطای سرور خام (فارسی/بالادست) نمایش داده نمی‌شود — متن دوستانهٔ دوزبانه
+                  console.error("[xenon] server error event:", event.message);
                   updateAssistant({
                     streaming: false,
-                    content: assistantContent || `⚠️ ${event.message}`,
+                    content: assistantContent || `⚠️ ${translateNow("toast.requestFailed")}`,
                   });
                   break;
               }
@@ -340,15 +363,38 @@ export const useXenon = create<XenonState>((set, get) => ({
         );
       }
     } catch (err) {
-      const aborted = err instanceof DOMException && err.name === "AbortError";
-      updateAssistant({
-        streaming: false,
-        content:
-          assistantContent ||
-          (aborted
-            ? translateNow("toast.stopped")
-            : `⚠️ ${err instanceof Error ? err.message : translateNow("toast.networkError")}`),
-      });
+      console.error("[xenon] sendMessage stream failure:", err);
+      const kind = classifyStreamFailure(err);
+      if (kind === "aborted") {
+        updateAssistant({
+          streaming: false,
+          content: assistantContent || translateNow("toast.stopped"),
+        });
+      } else if (assistantContent) {
+        // پاسخ نیمه‌تمام حفظ می‌شود و نشان «قطع‌شدگی» روی همان پیام می‌نشیند
+        updateAssistant({ streaming: false, interrupted: true });
+        toast({ title: translateNow("toast.streamInterrupted"), variant: "destructive" });
+      } else {
+        // هیچ متنی نرسید: پیام دوستانه + ثبت ارسال برای «تلاش دوباره» بدون از دست رفتن متن
+        set({
+          lastFailed: {
+            content: text,
+            mode,
+            regenerate: false,
+            userId: tempUserId,
+            assistantId: tempAssistantId,
+          },
+        });
+        updateAssistant({
+          streaming: false,
+          content: `⚠️ ${translateNow("toast.connectionLost")}`,
+        });
+        toast({
+          title: translateNow("toast.connectionLost"),
+          description: translateNow("toast.retryHint"),
+          variant: "destructive",
+        });
+      }
     } finally {
       set({ sending: false, streaming: false });
       abortController = null;
@@ -467,9 +513,11 @@ export const useXenon = create<XenonState>((set, get) => ({
                 break;
               }
               case "error":
+                // متن خام خطای سرور نمایش داده نمی‌شود — متن دوستانهٔ دوزبانه
+                console.error("[xenon] server error event (regenerate):", event.message);
                 updateAssistant({
                   streaming: false,
-                  content: assistantContent || `⚠️ ${event.message}`,
+                  content: assistantContent || `⚠️ ${translateNow("toast.requestFailed")}`,
                 });
                 break;
             }
@@ -477,15 +525,36 @@ export const useXenon = create<XenonState>((set, get) => ({
         }
       );
     } catch (err) {
-      const aborted = err instanceof DOMException && err.name === "AbortError";
-      updateAssistant({
-        streaming: false,
-        content:
-          assistantContent ||
-          (aborted
-            ? translateNow("toast.stopped")
-            : `⚠️ ${err instanceof Error ? err.message : translateNow("toast.networkError")}`),
-      });
+      console.error("[xenon] regenerate stream failure:", err);
+      const kind = classifyStreamFailure(err);
+      if (kind === "aborted") {
+        updateAssistant({
+          streaming: false,
+          content: assistantContent || translateNow("toast.stopped"),
+        });
+      } else if (assistantContent) {
+        updateAssistant({ streaming: false, interrupted: true });
+        toast({ title: translateNow("toast.streamInterrupted"), variant: "destructive" });
+      } else {
+        set({
+          lastFailed: {
+            content: "",
+            mode: state.activeMode,
+            regenerate: true,
+            userId: "",
+            assistantId: tempAssistantId,
+          },
+        });
+        updateAssistant({
+          streaming: false,
+          content: `⚠️ ${translateNow("toast.connectionLost")}`,
+        });
+        toast({
+          title: translateNow("toast.connectionLost"),
+          description: translateNow("toast.retryHint"),
+          variant: "destructive",
+        });
+      }
     } finally {
       set({ sending: false, streaming: false });
       abortController = null;
@@ -496,6 +565,22 @@ export const useXenon = create<XenonState>((set, get) => ({
         .catch(() => undefined);
     }
   },
+
+  retryLast: async () => {
+    const lf = get().lastFailed;
+    if (!lf || get().sending || get().streaming) return;
+    set({ lastFailed: null });
+    // حباب‌های خوش‌بینانهٔ تلاش ناموفق (کاربر + خطا) پاک می‌شوند تا ارسال مجدد تکراری نسازد
+    if (lf.userId || lf.assistantId) {
+      set((s) => ({
+        messages: s.messages.filter((m) => m.id !== lf.userId && m.id !== lf.assistantId),
+      }));
+    }
+    if (lf.regenerate) await get().regenerate();
+    else await get().sendMessage(lf.content);
+  },
+
+  clearLastFailed: () => set({ lastFailed: null }),
 
   addAttachment: (a) => set((s) => ({ attachments: [...s.attachments, a] })),
   removeAttachment: (id) => set((s) => ({ attachments: s.attachments.filter((x) => x.id !== id) })),

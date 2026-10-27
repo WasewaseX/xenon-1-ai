@@ -38,6 +38,7 @@ import { formatNumber, useI18n } from "@/lib/xenon/i18n";
 import { useLocale, useT } from "@/components/xenon/locale-provider";
 import { SERVED_TEXT_MODEL } from "@/lib/xenon/models";
 import { useXenon } from "@/lib/xenon/store";
+import { ConnectionBadge } from "./connection-badge";
 import { ChatArea } from "./chat-area";
 import { Composer } from "./composer";
 import { MemoryPanel } from "./memory-panel";
@@ -167,6 +168,7 @@ function Header({
       )}
 
       <div className="flex shrink-0 items-center gap-0.5">
+        <ConnectionBadge className="me-1.5" />
         <Button
           variant="ghost"
           size="icon"

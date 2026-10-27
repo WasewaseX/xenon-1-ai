@@ -371,13 +371,26 @@ export async function tts(
 ): Promise<{ base64: string; format: string } | null> {
   const zai = await getZai();
   // API hard limit: 1024 characters per request
-  const res = (await zai.audio.tts.create({
-    input: text.slice(0, 1024),
-    voice,
-    speed,
-    stream: false,
-    response_format: "wav",
-  })) as unknown as Record<string, unknown>;
+  const createTts = () =>
+    zai.audio.tts.create({
+      input: text.slice(0, 1024),
+      voice,
+      speed,
+      stream: false,
+      response_format: "wav",
+    }) as unknown as Record<string, unknown>;
+
+  // The upstream gateway intermittently rejects the first call with a spurious
+  // 400 ("response_format not supported") even for the verified wav combo —
+  // one quick retry absorbs that flakiness (observed 502s in production logs).
+  let res: Record<string, unknown>;
+  try {
+    res = await createTts();
+  } catch (firstErr) {
+    console.warn("[xenon] tts first attempt failed, retrying once:", firstErr);
+    await new Promise((r) => setTimeout(r, 400));
+    res = await createTts();
+  }
 
   // Preferred path: standard Response object → arrayBuffer with raw WAV bytes
   const maybeArrayBuffer = (res as unknown as { arrayBuffer?: () => Promise<ArrayBuffer> }).arrayBuffer;

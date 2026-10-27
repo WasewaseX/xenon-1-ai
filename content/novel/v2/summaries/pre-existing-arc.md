@@ -1,0 +1,7 @@
+# Continuation Brief — Where the Story Stands (for a writer starting at Chapter 24)
+
+Ashkarad is living in silence. The Blacktide ritual is broken: Custodian Anra Vey dissolved into black lace petals, leaving only her white gloves, and the First Vessel — the First Singer, forty years of harvested organs — woke, sang once, and died. Its release-song silenced every choir organ in the city, freeing the donors and blinding the Syndic Wardens: without the Choir's biological tracking, their pulse-readers count only heartbeats, the ledgers are burning, and the debt-system is fraying.
+
+Dar Mehran, Saltstairs surgeon and carrier of the Umbra Lily ("her"), refused the Throne twice and paid for it: he is at Vein Seven — Mind, where every use of power spends memories. His mother's face, his father's laugh, his first kiss, his childhood home's color are gone. He runs a free clinic with Professor Vahid (left arm amputated, teaching), Suri (carbon-scale graft ruined, still counting), Roya the ex-Cartographer (song-lobe severed, brass mask permanent), and Ilay — nine, "the garden's daughter," who still hears a music no one else can hear and draws "where the singing used to be."
+
+Vey's registry page names the deeper game: eight cities stamped BLOOMED—TRUE THRONE, Ashkarad circled in red — RECLAIM — signed THE GARDENER. On the clinic roof, in the first salt storm since the eclipse, Dar feels a second heartbeat, patient and immense — not the dead First Vessel, not Vey. The Lily speaks its first word: "Sister."

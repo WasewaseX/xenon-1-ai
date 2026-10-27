@@ -386,3 +386,203 @@ Work Log:
 Stage Summary:
 - Attachments fully repaired and browser-verified end-to-end; TTS now uses a contract-valid, gateway-verified configuration; all UI surfaces render clean in EN/FA, RTL/LTR, light/dark, desktop/mobile
 - Honest caveat: audio playback itself cannot be verified inside the sandbox's headless browser (no audio codec — NotSupportedError is environmental); the API payload is verified-correct WAV
+---
+Task ID: N-A
+Agent: series-bible
+Task: build series bible + continuation brief from existing 23 novel files
+
+Work Log:
+- Read worklog.md (novel context: Tasks 4-c/2 PDF compiles; manifest story order prologue -> ch01-06 -> interlude-1 -> ch07-12 -> interlude-2 -> ch13-16 -> interlude-3 -> ch17 -> ch18 -> epilogue) and all 23 files under content/novel/ completely (34,501 words)
+- Verified exact canon spellings by grep before writing: choir organs, pulse-reader, song-lobe, Blacktide (event, not district), Undergleam, Saltstairs, Marrowworks, Choratorium, carbon-scaled, gravel-heart, vital-debt
+- Wrote content/novel/v2/bible.md (~7,300 words): Premise & Tone; Voice & Style (POV/tense, rhythm, full debt/ledger/accounting metaphor system, 6 motifs + secondary, avoid-list); World & System (Ashkarad districts; Choir/debt-tracking; Nine Veins table 1-9 exactly as established — Flesh, Marrow, Blood, Breath, Nerve, Bone, Mind, Soul, Throne — Dar at Vein Seven/Mind; Umbra Lily; First Vessel/First Singer; Vey + World Registry/GARDENER/RECLAIM); Character sheet (14 named + entities); 22-entry chronological timeline in story order with file mapping; 16 open hooks (established / could grow); 8 documented continuity inconsistencies
+- Wrote content/novel/v2/summaries/pre-existing-arc.md (249 words): continuation brief ending on the epilogue "Sister." cliffhanger, self-contained for a writer starting at Chapter 24
+- Wrote content/novel/v2/reports/N-A.md (this task's full report)
+- Left pre-existing v2/ch001.md, ch006.md, ch007.md (prior agent's polish drafts) untouched; referenced in bible as prose-register examples only
+- No file under content/novel/ modified other than the three new v2 files; worklog appended via heredoc only
+
+Stage Summary:
+- Canon is now documented: Nine Veins ladder (Dar at Vein Seven/Mind), Choir debt-tracking via choir organs (silent since the First Singer's death-song), Umbra Lily as the ninth of nine Gardener seeds, World Registry: eight cities BLOOMED—TRUE THRONE, Ashkarad VESSEL: FLED—RECLAIM
+- Key open hooks for ch19+: epilogue second heartbeat + Lily's word "Sister."; Gardener/RECLAIM; Dar's spent memories vs the Lily's memory copies; Ilay's surviving music; burning ledgers/system collapse; lullaby origin
+- Known defects documented for writers: ch13 first-person POV slip; epilogue "Breath Veil" typo; Ilay double-rescue (ch11 vs ch12); Blood misnumbered Vein Five in ch18; Shirin's lobe smashed ch12 vs still-singing in ch14-16; Vahid arm amputation mismatch; First Vessel siting drift; interlude-3 truncated mid-sentence
+---
+Task ID: N-B
+Agent: chapter-expander
+Task: expand ch01-ch05 to v2/ch001-ch005 (~2000 words each)
+
+Work Log:
+- Read worklog.md and all 5 source chapters (content/novel/ch01-ch05.md) in full before rewriting
+- Created v2 outputs with headings matching output numbers + original source titles:
+  * v2/ch001.md "Two Heartbeats" — LIGHT POLISH of 2493w source, all beats kept, net +94 (2587w final, ≥1950 per brief)
+  * v2/ch002.md "The Courier" — expanded 1553→2003w (senses, interiority, parcel-handoff beat, canal dread)
+  * v2/ch003.md "Grace" — biggest expansion 908→2074w (grace-as-ledger world texture, storm glare vs Lily's light rule, temptation sequence, Marrow Vein set piece, frost-petal dawn)
+  * v2/ch004.md "The Silent Chorus" — expanded 1158→1994w (harvest-floor horror, census-page render w/ MISSING stamp, chase, First Vessel chamber, plaza broadcast)
+  * v2/ch005.md "The Professor of Impossible Anatomy" — LIGHT POLISH of 2087w source, all beats kept, trimmed to 2131w (in 1950-2200 band)
+- Expansion rules honored: same events/order/names/dialogue intent; additive beats only; dark-ledger biology metaphors; 3rd person past, close POV; EN only; no meta/notes/summaries
+- Verified: wc -w on every output after writing (re-checked after trims); grep confirmed line-1 headings; no tool text artifacts
+- Files touched: only the 5 v2 outputs + v2/reports/N-B.md + this worklog append; src/ and other content untouched
+
+Stage Summary:
+- v2/ch001-ch005 delivered at wc -w: ch001 2587, ch002 2003, ch003 2074, ch004 1994, ch005 2131
+- Full report at /home/z/my-project/content/novel/v2/reports/N-B.md
+---
+Task ID: N-C
+Agent: chapter-expander
+Task: expand ch06-ch10 to v2/ch006-ch010 (~2000 words each)
+
+Work Log:
+- Read worklog + all 5 sources completely (ch06 1487w, ch07 1106w, ch08 1399w, ch09 1181w, ch10 1381w) before rewriting; cross-checked beat order against v2/bible.md canon entries for ch06-ch10 (Cartographer song-lobe, Blood Vein opening, Blacktide three days, pit bloom + "one hundred and nine", Breath Vein void, Ilay registry).
+- Created v2/ch006.md "The Cartographer" — 2015 words (wc -w); v2/ch007.md "Memory Bleed" — 1967w; v2/ch008.md "War of Ledgers" — 1982w; v2/ch009.md "The Exchange" — 1979w; v2/ch010.md "Vein of Breath" — 1991w. All in the 1950-2200 target; re-ran wc -w after every write and did second-pass expansions on ch007/ch008/ch009/ch010 to cross 1950.
+- Expansion was additive only: sensory layers (brine/ink/organ-hum/drip-metronomes), close-POV interiority, dread pacing, ledger-debt metaphors, plus small new dialogue lines (Suri "freight/portage", Vahid "three closing notations / interruption", Gavel "poetry" jab). All source beats, names, dialogue intents, and the `· · ·` scene-break convention preserved; titles reused unchanged from sources; headings re-based to output numbers; English only, no author notes.
+- Wrote report /home/z/my-project/content/novel/v2/reports/N-C.md with per-file final counts.
+
+Stage Summary:
+- v2 chapters 6-10 delivered: ch006 2015 / ch007 1967 / ch008 1982 / ch009 1979 / ch010 1991 words (9,934 total vs 6,554 source).
+- Plot fidelity: zero events added/removed/reordered; no contradictory facts; canon consistency verified against v2/bible.md (THRONE shaft, DO NOT COUNT THE HEARTBEATS, Kaelen/Elara reliquaries, VESSEL: ILAY registry, out-of-hours bell).
+- Only v2/ch006-ch010.md, v2/reports/N-C.md, and this worklog append were touched; src/ and all other content files unmodified.
+---
+Task ID: N-E
+Agent: chapter-expander
+Task: expand ch15-ch18 to v2/ch015-ch018 (~2000 words each)
+
+Work Log:
+- Read worklog + sources ch15-ch18 completely; cross-checked continuity against ch14, 19-epilogue, and v2/bible.md (Nine Vein order, Blacktide, grace storms, Roya/Cartographer, Vey's lullaby, World Registry wording)
+- Expanded 4 chapters preserving every beat/dialogue intent in order; added sensory detail, interiority, dread pacing, and minor non-contradictory dialogue; ledger/accounting metaphor register throughout; all prose ENGLISH ONLY, no meta
+- ch015 "Truce of Salt" — cistern truce + dawn balcony + frost-petal banners kept; scene break "· · ·" kept
+- ch016 "The Offering" — dinner with Vey, graft-theater, Vahid on altar, heart-in-glass offer, "Shall we begin?" kept; fixed source typo "First Vessor" → "First Vessel"
+- ch017 "Bloom" — Vein sequence Flesh→Marrow→Blood→Breath→Nerve→Bone, two refusals of the bloom, "Then carry me a little further", "Not peace. Choice." kept; two "· · ·" breaks kept
+- ch018 "The Cost" — biggest expansion (source ~950 words): Vein Seven memory-ledger payments, bloom-through Vey, collapsing theater, Roya unmasked, First Singer's liberation song, the four costs, Vey dissolves to gloves, World Registry "THE GARDENER"/"VESSEL: FLED—RECLAIM"; registry page folded into coat to match epilogue
+- Word counts verified with wc -w after writing, trimmed/expanded to land in 1950-2200: ch015=2174, ch016=2181, ch017=2068, ch018=2032
+- Touched only content/novel/v2/ch015.md-ch018.md, reports/N-E.md, and this worklog append
+
+Stage Summary:
+- v2/ch015-ch018 complete at webnovel length, headings match output numbers, all four in 1950-2200 wc -w range; report at content/novel/v2/reports/N-E.md
+---
+Task ID: N-D
+Agent: chapter-expander
+Task: expand ch11-ch14 to v2/ch011-ch014 (~2000 words each)
+
+Work Log:
+- Read worklog + all four sources completely (re-fetched ch12's 3 oversized paragraphs untruncated before rewriting)
+- Wrote /home/z/my-project/content/novel/v2/ch011.md — "The Girl Who Heard the Singing" (2199 wc -w): full beat preservation (Ilay rescue, registry entry, heat-berries, First Singer reveal, crayon shaft map, Anra Vey tea ultimatum)
+- Wrote /home/z/my-project/content/novel/v2/ch012.md — "Chorus of Flesh" (2131 wc -w): source mega-paragraphs restructured into scenes; preserved grading-night raid, reliquary, eleven children, Elias on the table, Shirin's lobe, "Custodian is building a BODY", applauding masked Custodian
+- Wrote /home/z/my-project/content/novel/v2/ch013.md — "Nerve" (2002 wc -w): converted source's first-person passages to third-person close POV on Dar; preserved door-building training, Marrowworks liberation + Gavel debt transfer, intimacy cost scene, Ilay's singing-maps, shaft descent ending with matched heartbeats
+- Wrote /home/z/my-project/content/novel/v2/ch014.md — "The Ninth Door" (1981 wc -w; biggest expansion, source ~1002 words): preserved Cartographer briefing, registry-burning bargain, Vahid's empty chair + plagiarism note, salt-storm decision; expansions are sensory/interiority only
+- Verified: wc -w in 1950-2200 for all four; grep spot-checks confirm all signature plot beats/dialogue present; headings match output numbers with source titles; English-only, no meta
+
+Stage Summary:
+- 4/4 chapters expanded in range (total 8,313 words vs 5,763 source); plot, order, names, dialogue intent unchanged; report at content/novel/v2/reports/N-D.md
+---
+Task ID: N-F
+Agent: bridge-expander
+Task: transform prologue/interludes/epilogue into v2 prologue + ch019-ch023
+
+Work Log:
+- Read worklog (N-A..N-E), v2/bible.md, summaries/pre-existing-arc.md, and all five source bridge files completely (00-prologue 1146w, interlude-1 1306w, interlude-2 1521w, interlude-3 3297w incl. truncated end, 19-epilogue 1268w) before rewriting
+- v2/prologue.md "The Last Honest Thief" (unnumbered heading per spec): 1146 -> 2095w; all beats kept in order (grace storm, Kael's "buyer wants it singing", biogel reliquary + black umbra lily, Suri's patrol count, enforcer massacre, gut-shot + cracked reliquary, captain tasting blood; wake healed, two heartbeats, "You are mine now."; captain coda "It chose... The choir must be complete."); source "---" and "· · ·" breaks preserved
+- v2/ch019.md "The Tithe-Clerk's Day" (from interlude-1, Milla Ferun POV): 1306 -> 2189w; beats kept (33-heart quota, Elara, three stamps + 12,743 count, Kaelen 18,497 marks + section seven + Nurse Jory + 72-hour grace period note, Borin's flagged RHYTHM UNRESOLVED order, thermal-copier copy kept + original incinerated, nursery-wing singing, salt-storm walk home, five-petal flower in the pulse lines, salt-garden dream + porcelain smiler, salt under her nails)
+- v2/ch020.md "The Weight of Scales" (from interlude-2, Suri POV): 1521 -> 2126w; beats kept (12 yrs 7 mos + salt-moon interest, skin sold at nineteen, graft as receipt resold three times, year-24 blank page, raid cost audit + hairline ulna fracture, alley stitches "Eighteen... that's what you owe me", first unpriced thing, curfew bell = twelve strokes, CURRENT DEBTS columns, full Dar ledger dialogue through "parts. Specific parts.", CHORUS - UNKNOWN LIABILITY page, DAR MEHRAN - PAID IN FULL + "(keep counting anyway)", Ilay's closer "It's louder here.")
+- v2/ch021.md "What the Lily Dreamed, Part One" (interlude-3 split, Lily 2nd-person present per bible): 2032w; salt bed + nine heartbeats as lanterns, bone-white gloved hands + lullaby smell, lead-and-glass reliquaries + eight siblings, corridor through a body + "Go. Find your hearts. And bloom.", nine-moon sky, the paid carrier boy, the cellar fall + hand-to-hand journey, formaldehyde drawer, fading heartbeat + first inner warmth, dream of the last boy (gravel-heart, hospital stitching, bullet, fusion, memories flooding); ends "It is the first thing anyone has ever paid you."
+- v2/ch022.md "What the Lily Dreamed, Part Two": 2053w; garden of salt and starlight + Gardener's "last, the ninth" promise, boy's-chest cycle, Choratorium + "The Blacktide comes... world will be made whole", source's repeated loop rendered as a fraying dream-circuit; COMPLETED the truncated ending: nine-lantern count flaw (only eight hung), Gardener's lullaby = the mother's song, waking into the post-Blacktide quiet clinic (one-handed lecture, charcoal, counting, pulse-readers printing only heartbeats), first salt storm sensed on the wind; resolves on "You are not content... And when it comes, it will not be the song you were promised." No epilogue beats pre-empted
+- v2/ch023.md "A Door in the Dark" (from 19-epilogue, arc-one coda): 1268 -> 1982w; all named beats kept (boy with crushed hand; Vahid one-handed, spectacles, retractor, "body is a ledger"; Suri graft + "Three hundred and twelve... deficit of variety"; Roya brass mask; Ilay drawing "where the singing used to be"; burning ledgers; Vey's registry page w/ flower symbol, Ashkarad circled red, RECLAIM, GARDENER; Vein Seven/Mind "memory was architecture"; first "grace" storm; second heartbeat patient and immense); fixed "Breath Veil" -> "Breath Vein"; final line exactly: "Sister."
+- Verified: wc -w in 1950-2200 for all six (prologue 2095, ch019 2189, ch020 2126, ch021 2032, ch022 2053, ch023 1982); headings match output numbering; no non-English text, no author notes/meta, no first-person slips in third-person chapters, no "chorus organs"/"Breath Veil" regressions; every file ends on a complete sentence/hook
+- Split point for interlude-3: ch021 ends after the fusion/memory-flood (Dar's memories entering the Lily); ch022 opens with "The dream shifts... garden of salt and starlight" (the Gardener's promise sequence)
+- Wrote report content/novel/v2/reports/N-F.md; touched only the six v2 outputs, the report, and this worklog append
+
+Stage Summary:
+- Bridge material now webnovel-length in the new numbering: prologue + ch019-ch023 total 12,477w vs 8,538w source; ch019/ch020/ch021-22 repositioned as the arc's closing bridge movement; ch023 coda cliffhanger ("Sister.") preserved verbatim as the final line
+- Full per-file counts and split rationale in content/novel/v2/reports/N-F.md
+---
+Task ID: N-G
+Agent: story-architect
+Task: beat sheet outline for chapters 24-100
+
+Work Log:
+- Read worklog.md, content/novel/v2/bible.md completely (all 8 defects + 16 hooks), summaries/pre-existing-arc.md, and prior novel-task reports (N-A..N-E) for conventions
+- Wrote content/novel/v2/outline-100.md (~10,100 words): header "Outline — Chapters 24–100"; "Canon fixes" resolving all 8 bible defects into one canonical answer each (First Vessel = deep salt vaults beneath the Throne shaft; Veins 1 Flesh..9 Throne; Ilay one rescue/copper-haired; Vahid one-handed + spectacles; Shirin's lobe destroyed ch12; ch13 POV slip + "Breath Veil" = defects; interlude-3 truncation = planted motif; Blacktide 3-days-from-ch14; 23 files = Chapters 1–23) plus new-entities canon (Isra, Coram Hesh, Old Tally, Wen, Vell, Dathan Kaveh; Brack/Lowmark/the Vigil/Gullet/Sarn/Weep/Ossuar/Hallowfen; the Root, First Burning, memory-velum, bloom-tallow, claiming-hymn, chorus-free medicine, Index/Open Counts, Standing Count, chord-doctrine, page zero)
+- Arc spine kept as briefed with all payoffs: II 24–32 second Lily confirmed alive under Throne shaft; III 33–41 registry decoded + herald exposed + Dar leaves; IV 42–52 Lowmark/Vigil/Gullet + Soul = door shared between two; V 53–62 Sister arrives + LID/locks + RECLAIM = cities pruned to feed the Root; VI 63–74 shared Soul climb + memory-trade climax + Vein Eight opens + Gardener names the Root; VII 75–90 fleet audit + chorus-vs-bloom choice + Suri/Vahid/Roya unification + Sister's resolve + 3 herald-chorus set-pieces + partial Vein Nine sees the Door and the original garden; VIII 91–100 three-way choice + mandatory reveals (Lily's origin, lullaby origin, city's purpose, mother's-face, Ilay's true song) + Ninth Vein = chord not rung
+- Per-chapter beats: 77 entries (verified 77 '### Chapter N' headings), each with specific events, lead character, thread advanced, closing hook; evocative ledger/biology titles; no adjacent repeats; Lily speech budget enforced (one new line, ch90)
+- The one meaningful loss decided: the Sister — first seed stays below forever as the rewritten ledger's keeper (ch96–99); second heartbeat goes still to the surface
+- Final Hook ledger table: all 16 bible hooks mapped to advance chapters + closure chapters; exactly one conscious sequel hook (far cities waking, ch100 only)
+- Files touched: outline-100.md (new), reports/N-G.md (new), this worklog append; no prose chapters, no other files modified
+
+Stage Summary:
+- outline-100.md delivered: 7 arcs (II–VIII, ch24–100), 77 chapter beats, canon-fix section, new-canon register, hook ledger (16/16 hooks advanced and closed, one deliberate open thread)
+- Finale: Ninth Vein = chord not rung; ledger rewritten around consent; garden sleeps; Ch 100 "One Heartbeat, Many" mirrors "Two Heartbeats"
+- Report at content/novel/v2/reports/N-G.md
+---
+Task ID: N-H
+Agent: chapter-writer
+Task: write new chapters 24-29 from outline
+
+Work Log:
+- Read worklog, v2/bible.md, summaries/pre-existing-arc.md, outline-100.md (beats for ch24-29 + canon fixes + hook ledger), and ch023.md for voice/state continuity; also re-read v2/ch019 and ch020 for Milla/Suri POV registers
+- Wrote content/novel/v2/ch024.md "The Silence Audit" (1956w): 3 weeks post-Blacktide, hand-counted dead, overflowing clinic, Warden-Auditor Seft's new pulse-reader demands patient ledger "for reconciliation", Dar refuses names and posts the audit's own terms unpriced; hook = RHYTHM UNRESOLVED for three stock children + unprompted REQ: VESSEL REGISTRY — PAGE NINE
+- Wrote content/novel/v2/ch025.md "What the Fire Kept" (2090w, Suri POV): census halls burn (debtor/clerk/Index fires), couriers salvage name-pages (Kaelen BLOOMED THROUGH, nursery intake sheet), Index named on-page, Suri finds her own RESOLD — THREE TIMES page and keeps it (burn reserved for ch66); hook = bounty whisper for "the Ferun printout" (FERUN — ? filed)
+- Wrote content/novel/v2/ch026.md "The Unspent Room" (1970w, Dar POV w/ Vahid lecture): chalk ladder, memory-as-architecture rules, nine walks past swept rooms without spending, then the furnished door he never built — humming, warm, like a room someone has just left; WE DO NOT OPEN DOORS WE DID NOT BUILD boxed on the wall
+- Wrote content/novel/v2/ch027.md "Where the Singing Went" (2033w, Roya POV): Ilay's drawings changed to a moving spiral; Roya maps through the girl; spiral converges under Marrowworks/Throne shaft, cross-confirmed vs Dar's rooftop hearings; hook = innermost ring dated "soon" in Ilay's hand
+- Wrote content/novel/v2/ch028.md "Sanctuary Terms" (2070w, Suri POV): Gavel annexes Choratorium ruins, registry = "the price of protection", enforcers come for the Parra family, Dar stands them off (Blood Vein quoted), Suri negotiates formal sanctuary (no names leave the building) at the annexed Choratorium; hook = Gavel agrees too easily, ledgermen count foot-traffic
+- Wrote content/novel/v2/ch029.md "The Ninth Petal" (1981w, Milla POV): Index raid on Saint Ferrous archive takes census clerks hostage (Elara conscripted, alive), Milla defaults on her roster and defects to the clinic with the printout (only surviving print; original incinerated in ch19 — reconciled with outline's ch66 "original from her coat lining"); confesses sleep-drawn five-petal flower, last night NINE petals; hook = salt under her fingernails though not underground in weeks
+- Wrote content/novel/v2/summaries/ch024-029.md (per-chapter 4-sentence briefs: events, state changes, hooks) and content/novel/v2/reports/N-H.md (word counts + fidelity notes)
+- Verified all six via wc -w in 1950-2200 (ch024 1956, ch025 2090, ch026 1970, ch027 2033, ch028 2070, ch029 1981); headings exact per outline; hooks all land; no Lily speech (budget: next at ch90); no first-person narrative slips; no "chorus organs"/"Breath Veil"; costs stay paid (no memory restorations); canon fixes honored (Ilay copper/one rescue, Mind=Vein Seven, Vahid one-handed + wire-mended spectacles, Throne shaft vaults as single deep site)
+- Deviations: none material; interpretive notes in report (ch26/ch27 lead-POV handling, Index naming placed on-page, "original copy" harmonization)
+
+Stage Summary:
+- ARC II opened: chapters 24-29 delivered at webnovel length (total 12,103w), each on its outline hook; clinic now sanctuary (watched), Index formed and bounty-hunting the printout, Milla defected with the two-rhythm slip (nine-petal flower), Mind Vein training underway, furnished unknown door discovered, deep heartbeat mapped converging on the Throne shaft dated "soon"
+- Files touched: content/novel/v2/ch024.md-ch029.md, summaries/ch024-029.md, reports/N-H.md, this worklog append
+---
+Task ID: N-K
+Agent: chapter-writer
+Task: write new chapters 42-47 from outline (start of Arc IV)
+
+Work Log:
+- Read worklog.md, bible.md, summaries/pre-existing-arc.md, outline-100.md, ch023.md (voice reference); Arc IV beats 42-47 treated as contract.
+- Wrote /home/z/my-project/content/novel/v2/ch042.md "The Ledger of the Road" (1964 w) — salt-flats crossing; Sister's footprints one heartbeat apart.
+- Wrote ch043.md "The Drowned Choir" (2033 w) — Lowmark, tide-priests, marriage-feeding, bloom-tallow caravans, lead-box relic hook.
+- Wrote ch044.md "Memory-Vellum" (2032 w) — World Registry page touched; Gardener's left-handed burn-scarred signature = flower sigil like a stamp.
+- Wrote ch045.md "True Currency" (2033 w) — deposit-copies of Ashkarad's page; counterfeit refused (RHYTHM UNRESOLVED); clinic's first morning spent; father's laugh 11 heartbeats with lullaby inside.
+- Wrote ch046.md "Three Heartbeats of Her Face" (2091 w) — mother-entry priced a decade; Vell's collateral refused; Suri's promissory to the road; "little root"; column WHAT WE OWE THE ROAD.
+- Wrote ch047.md "Bloom-Tallow" (2198 w, Suri POV) — marriage-tithe of stock-child Hessa; surgery+audit break rite; granary burns itself; chit "per the Reclaim — sustain the route."
+- Wrote summaries/ch042-047.md (per-chapter: events, state changes, hooks) and reports/N-K.md (counts + interpretation notes).
+
+Stage Summary:
+- All six chapters 1950-2200 words, headings exact per outline, English-only (regex-verified), Lily never speaks, canon fixes honored (Vein order, Ilay copper, Vell mute-by-slate, costs stay paid).
+- New minor characters: Orlo, Maren, Tetch, Hessa, the Bridewarden; no named-character deaths or irreversible changes; hooks delivered verbatim per outline.
+- Next agent (ch48+): party = Dar, Suri, Vell; pending debts = Suri's road-promissory (herald-collected) + the WHAT WE OWE THE ROAD column; the Vigil beat begins ch48 with lead-glass quarantine offer.
+---
+Task ID: N-I
+Agent: chapter-writer
+Task: write new chapters 30-35 from outline
+
+Work Log:
+- Read worklog.md, v2/bible.md, summaries/pre-existing-arc.md, v2/outline-100.md (ch30-35 beats = contract), v2/ch023.md for voice continuity; never opened concurrent ch024-029
+- Wrote v2/ch030.md "One Beat Behind" (2071w): first controlled Mind Vein walk on the clinic roof (memory-rooms walked without paying; ch26 furnished door refused again, lamplight thread beneath it); second heartbeat heard clearly — exactly one beat behind Dar's; Cartographer's tally slate still 109 with five fresh unremembered strokes; Lily's lean shifts his balance and the deep leans back (hooks 1, 7)
+- Wrote v2/ch031.md "The Salt-Glass Door" (2196w): descent against Vahid's written prohibition with Suri counting steps, Ilay's copied spiral map, Roya holding the shaft head; past the dead First Vessel's cold cathedral of flesh into the deep salt vaults beneath the Throne shaft (walls ring like struck glass); salt-glass door with the heartbeat behind it like a tide; hook: black petal pressed to the far side level with Dar's chest (canonizes outline fix 5)
+- Wrote v2/ch032.md "Petal Against Glass" (1993w) — ARC II CLIMAX: petal taps the lullaby's opening bars; Lily answers through Dar's ribs, two songs reconcile (frost blooms in matched five-petal patterns; taps land on his offbeats); second Lily confirmed real/alive/aware of him; Dar does NOT open the door; petal withdraws; keyhole exposed as five-petaled flower; door ajar, breathing loam-scented warm air; hook: unlocked from the other side — wants to be found, afraid of being found; ch32->ch33 seam pivots to the Gardener question (deliberate ARC III transition)
+- Wrote v2/ch033.md "Eight Cities, One Route" (1999w, ARC III opens): registry page under Vahid's lens + Roya's charts; eight names verbatim (Lowmark, the Vigil, Gullet, Sarn, Weep, Ossuar, Brack, Hallowfen); sigil repeated like a surveyor's mark; black pollen in the grain, not ink; page needle-pricked like a pattern, pollen = the pounce; plotted round: Brack first (Brack lane empty of League traffic) -> Ashkarad last; hook: lamp-warmed pollen turns slowly toward the sea ("a receipt that knows where its debtor lives")
+- Wrote v2/ch034.md "The Surveyor's Kindness" (2017w): Surveyor Coram Hesh of the Caravan League introduced with storm-caravans; free structural surveys, clinic hosts him, everything Vey was not; Suri catches tissue-scrapings "for subsidence records" and confiscates one packet; Dar hears the lullaby in his humming correct except one note (filled hanging pause = forgery fills blanks); hook: night frost-blooms on every clinic window point at Hesh's lodgings
+- Wrote v2/ch035.md "Harvest Marks" (2012w, Choirmaster POV per outline lead): Choirmaster alive, half-starved, guarding reliquary corridors from scavengers (re-labeled dead: Kaelen/Elara/Elias; crooked wrist from ch12); Roya's rubbings of Hesh's marks -> goes grey: harvest-routing marks, Church-grade, grammar of a city-wide tithe with a master sheet behind them; admits one unburned harvest-registry copy (vessel list entire, "Kaveh, Suri — resold three times") kept in a lead tithe-box, stays its guard (sets ch41); Roya chalks reconstructed master map, circled-flower claim-mark lands on clinic district — "Ashkarad's page, being redrawn by hand"; "what is the city for" reprised (hooks 11, 16)
+- Wrote v2/summaries/ch030-035.md (per-chapter 3-4 sentence summaries: events, state changes, hooks)
+- Wrote v2/reports/N-I.md (per-file counts, beat fidelity table, canon-compliance notes, 5 documented deviations/judgment calls — including arc-boundary discrepancy: task brief said ch29 ends ARC II but outline-100.md defines ARC II as ch24-32 / ARC III as ch33-41; followed the outline, transition made deliberate across the ch32->ch33 seam)
+- Compliance: wc -w in 1950-2200 for all six (re-verified after edits); line-1 headings exactly per outline titles; third limited past, no first-person slips; Lily speaks zero new words (hum/tap/lean only); no memory spends; no named character killed or irreversibly changed; "choir organs" not "chorus organs"; Blacktide event only; ENGLISH ONLY, no meta/notes
+
+Stage Summary:
+- Chapters 30-35 delivered: ch030 2071 / ch031 2196 / ch032 1993 / ch033 1999 / ch034 2017 / ch035 2012 (12,288w total), all beats/names/hooks per outline
+- State after ch35: second Lily confirmed alive behind ajar salt-glass door in the deep salt vaults; Gardener's collection round decoded (Ashkarad last stop); herald Coram Hesh embedded and unchallenged (one wrong note + pointing frost known to Dar); Choirmaster resurfaced as keeper of the unburned harvest-registry
+- Report at content/novel/v2/reports/N-I.md; summaries at content/novel/v2/summaries/ch030-035.md
+---
+---
+Task ID: N-J
+Agent: chapter-writer
+Task: write new chapters 36-41 from outline (end of Arc III)
+
+Work Log:
+- Read worklog, bible.md, summaries/pre-existing-arc.md, outline-100.md (Arc III beats + canon fixes + new-entity canon), ch023.md for voice; cross-checked other agents' reports (N-A..N-G) for scope only.
+- Wrote 6 new chapters from the ch36-41 beat sheet, dramatizing without altering events/fates/reveals; titles copied exactly from outline-100.md; POV per outline lead (36 Suri, 37 Dar, 38 Vahid, 39 Dar, 40 Roya+Dar, 41 Dar).
+- Enforced bible rules: no Lily speech (budget: ch90 only), costs stay paid, darkness/light/blood rules, ledger-accounting register, no first-person narration slips, no non-English text, no meta.
+- Per-file wc -w verified in the 1950-2200 band after write + expansion/trim passes: ch036 2109, ch037 2067, ch038 2032, ch039 2156, ch040 2192, ch041 2093 (total 12,649).
+- Continuity: outline canon fixes applied (Vahid one-handed + spectacles, Ilay copper-haired, Vein numbering, Throne shaft/deep salt vaults sitings only); new outline entities introduced as scripted (Coram Hesh, Vell of Brack, the wain, Caravan League feast, Index/Open Counts texture); Lily speech budget untouched; no named character killed or irreversibly changed.
+- Deviations (additive only, documented in reports/N-J.md): pulse-reader second printed line (ch36); Mind Vein fee mechanics + Vell's survival-by-entry device (ch37); heart-recovery-from-Hesh's-lodgings backstory consistent with bible hook 14 (ch40); Vell/Roya/Milla present at farewells beyond the four outlined (ch41, ch42 requires Vell on the road); one-beat-drift plant for ARC IV Sister travel (ch40 close).
+
+Stage Summary:
+- Arc III complete from my side: Brack's delivered zero-count received (ch36), the harvest witnessed via priced Mind Vein read (ch37), sibling-stock breeding program + RECLAIM leaked through Ilay (ch38), herald's two-cup ritual and Dar's seed-of-nine understanding (ch39), antenna-heart trap springs and Hesh files "Vessel located. Send the wain." (ch40), farewells priced and Dar walks the RECLAIM round in reverse past the seawalls into the drinking tide (ch41).
+- Files touched: content/novel/v2/ch036.md-ch041.md (new), summaries/ch036-041.md (new), reports/N-J.md (new), this worklog append. No other files modified.

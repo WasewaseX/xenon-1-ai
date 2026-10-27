@@ -16,6 +16,8 @@ import type {
 async function jsonFetch<T>(url: string, init?: RequestInit): Promise<T> {
   const res = await fetch(url, {
     ...init,
+    // پادزهر درخواست‌های معلق: اگر سرور پاسخ ندهد، اتصال را رها کن تا UI قفل نشود
+    signal: init?.signal ?? AbortSignal.timeout(90_000),
     headers: { "Content-Type": "application/json", ...(init?.headers ?? {}) },
   });
   if (!res.ok) {
@@ -105,33 +107,106 @@ export async function fetchStats(): Promise<StatsDTO> {
   return jsonFetch("/api/stats");
 }
 
-// ---------- جریان گفتگو (SSE) ----------
+// ---------- جریان گفتگو (SSE) با تاب‌آوری شبکه ----------
+
 export interface ChatStreamHandlers {
   onEvent: (event: StreamEvent) => void;
   signal?: AbortSignal;
 }
 
-export async function streamChat(body: object, handlers: ChatStreamHandlers): Promise<void> {
-  const res = await fetch("/api/chat", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-    signal: handlers.signal,
-  });
-
-  if (!res.ok || !res.body) {
-    const text = await res.text().catch(() => "");
-    throw new Error(text || "شروع جریان پاسخ ناموفق بود");
+/** جریان هرگز برقرار نشد (حتی بعد از تلاش مجدد خودکار). */
+export class StreamStartError extends Error {
+  constructor(message = "stream-start-failed") {
+    super(message);
+    this.name = "StreamStartError";
   }
+}
 
-  const reader = res.body.getReader();
+/** جریان برقرار شده بود اما وسط کار قطع شد (افت شبکه یا سکوت طولانی). */
+export class StreamInterruptedError extends Error {
+  constructor(message = "stream-interrupted") {
+    super(message);
+    this.name = "StreamInterruptedError";
+  }
+}
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+// فقط خطاهای گذرای لایهٔ شبکه/گیت‌وی تلاش مجدد می‌شوند. خطاهای 4xx نهایی‌اند.
+const RETRYABLE_STATUS = new Set([429, 502, 503, 504]);
+const MAX_CONNECT_ATTEMPTS = 3;
+// سرور هر ۱۵ ثانیه «: ping» می‌فرستد؛ سکوت بیشتر از این حد یعنی لوله مرده است.
+const STALL_TIMEOUT_MS = 70_000;
+
+/**
+ * اتصال جریان را با تلاش مجدد خودکار برقرار می‌کند.
+ * نکتهٔ حیاتی: تلاش مجدد فقط وقتی امن است که «هیچ بایتی» دریافت نشده باشد
+ * (خطای fetch یا 5xx گیت‌وی) — در این حالت سرور هیچ گفتگویی نساخته است.
+ */
+async function openChatStream(body: object, signal?: AbortSignal): Promise<Response> {
+  let lastError: unknown = null;
+  for (let attempt = 1; attempt <= MAX_CONNECT_ATTEMPTS; attempt++) {
+    if (attempt > 1) await sleep(600 * (attempt - 1)); // 600ms, 1200ms
+    if (signal?.aborted) throw new DOMException("Aborted", "AbortError");
+    try {
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+        signal,
+      });
+      if (res.ok && res.body) return res;
+      const text = await res.text().catch(() => "");
+      if (RETRYABLE_STATUS.has(res.status)) {
+        lastError = new Error(text || `HTTP ${res.status}`);
+        continue;
+      }
+      throw new Error(text || `HTTP ${res.status}`);
+    } catch (err) {
+      if (signal?.aborted) throw err;
+      // TypeError: NetworkError / Failed to fetch — درخواست به سرور نرسیده،
+      // پس تلاش مجدد هیچ دادهٔ تکراری نمی‌سازد.
+      lastError = err;
+      continue;
+    }
+  }
+  throw new StreamStartError(lastError instanceof Error ? lastError.message : undefined);
+}
+
+export async function streamChat(body: object, handlers: ChatStreamHandlers): Promise<void> {
+  const res = await openChatStream(body, handlers.signal);
+  const reader = res.body!.getReader();
   const decoder = new TextDecoder();
   let buffer = "";
 
+  // خواندن یک chunk با نگهبان سکوت: اگر جریان بیش از حد مجاز ساکت بماند،
+  // به‌جای معلق ماندن ابدی، خطای قطع‌شدگی پرتاب می‌شود.
+  const readWithStallGuard = () => {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    return Promise.race([
+      reader.read(),
+      new Promise<never>((_, reject) => {
+        timer = setTimeout(() => reject(new StreamInterruptedError()), STALL_TIMEOUT_MS);
+      }),
+    ]).finally(() => {
+      if (timer) clearTimeout(timer);
+    });
+  };
+
   while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    buffer += decoder.decode(value, { stream: true });
+    let chunk: Awaited<ReturnType<typeof reader.read>>;
+    try {
+      chunk = await readWithStallGuard();
+    } catch (err) {
+      try {
+        await reader.cancel();
+      } catch {
+        // جریان از قبل بسته شده
+      }
+      throw err;
+    }
+    if (chunk.done) break;
+    buffer += decoder.decode(chunk.value, { stream: true });
     const events = buffer.split("\n\n");
     buffer = events.pop() ?? "";
     for (const evt of events) {

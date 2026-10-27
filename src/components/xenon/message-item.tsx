@@ -224,6 +224,24 @@ export function MessageItem({ message, isLastAssistant = false, onRegenerated }:
           </div>
         )}
 
+        {message.interrupted && !message.streaming ? (
+          <div className="mt-2 flex items-center gap-2 rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-1.5 text-xs text-amber-600 dark:text-amber-400">
+            <AlertTriangle className="h-3.5 w-3.5 shrink-0" aria-hidden />
+            <span className="min-w-0 flex-1" dir="auto">{t("message.interrupted")}</span>
+            {isLastAssistant ? (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-6 shrink-0 gap-1 px-1.5 text-xs text-amber-600 hover:text-amber-500 dark:text-amber-400 dark:hover:text-amber-300"
+                onClick={handleRegenerate}
+              >
+                <RotateCcw className="h-3 w-3" aria-hidden />
+                {t("composer.retry")}
+              </Button>
+            ) : null}
+          </div>
+        ) : null}
+
         {message.attachments && message.attachments.length > 0 ? (
           <div className="mt-2.5 flex flex-wrap gap-2">
             {message.attachments.map((att) => (

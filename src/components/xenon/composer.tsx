@@ -18,9 +18,11 @@ import {
   Loader2,
   Mic,
   Paperclip,
+  RotateCcw,
   Sparkles,
   Square,
   Telescope,
+  WifiOff,
   X,
   type LucideIcon,
 } from "lucide-react";
@@ -267,6 +269,9 @@ export function Composer({ embedded = false }: ComposerProps) {
 
   const sending = useXenon((s) => s.sending);
   const streaming = useXenon((s) => s.streaming);
+  const lastFailed = useXenon((s) => s.lastFailed);
+  const retryLast = useXenon((s) => s.retryLast);
+  const clearLastFailed = useXenon((s) => s.clearLastFailed);
   const attachments = useXenon((s) => s.attachments);
   const imageGenMode = useXenon((s) => s.imageGenMode);
 
@@ -367,6 +372,38 @@ export function Composer({ embedded = false }: ComposerProps) {
             ))}
           </div>
         )}
+
+        {lastFailed && !streaming && !sending ? (
+          <div
+            role="status"
+            className="mb-2 flex items-center justify-between gap-2 rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-1.5"
+          >
+            <span className="flex min-w-0 items-center gap-2 text-xs text-destructive" dir="auto">
+              <WifiOff className="h-3.5 w-3.5 shrink-0" aria-hidden />
+              <span className="truncate">{t("composer.retryLast")}</span>
+            </span>
+            <span className="flex shrink-0 items-center gap-0.5">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 gap-1.5 px-2 text-xs text-destructive hover:text-destructive"
+                onClick={() => retryLast()}
+              >
+                <RotateCcw className="h-3 w-3" aria-hidden />
+                {t("composer.retry")}
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                aria-label={t("composer.dismiss")}
+                onClick={clearLastFailed}
+              >
+                <X className="h-3.5 w-3.5" aria-hidden />
+              </Button>
+            </span>
+          </div>
+        ) : null}
 
         <div className="rounded-2xl border border-border/80 bg-card transition-colors focus-within:border-primary/45 focus-within:ring-[3px] focus-within:ring-primary/15">
           <Textarea
