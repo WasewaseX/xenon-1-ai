@@ -49,6 +49,9 @@ function isAgentStepKind(value: unknown): value is AgentStepKind {
     value === "search" ||
     value === "read" ||
     value === "github" ||
+    value === "file" ||
+    value === "terminal" ||
+    value === "memory" ||
     value === "synthesize"
   );
 }

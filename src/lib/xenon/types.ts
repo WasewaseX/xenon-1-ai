@@ -82,7 +82,15 @@ export interface StatsDTO {
 }
 
 // --- گام‌های عامل (حالت ایجنت) ---
-export type AgentStepKind = "plan" | "search" | "read" | "github" | "synthesize";
+export type AgentStepKind =
+  | "plan"
+  | "search"
+  | "read"
+  | "github"
+  | "file"
+  | "terminal"
+  | "memory"
+  | "synthesize";
 
 export type AgentStepState = "start" | "done";
 

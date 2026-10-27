@@ -9,11 +9,14 @@ import {
   BookOpen,
   Check,
   ChevronDown,
+  Database,
+  FileText,
   Github,
   ListChecks,
   Loader2,
   Search,
   Sparkles,
+  Terminal,
   Workflow,
   type LucideIcon,
 } from "lucide-react";
@@ -29,6 +32,9 @@ const KIND_ICON: Record<string, LucideIcon> = {
   search: Search,
   read: BookOpen,
   github: Github,
+  file: FileText,
+  terminal: Terminal,
+  memory: Database,
   synthesize: Sparkles,
 };
 
@@ -37,6 +43,9 @@ const KIND_LABEL_KEY: Record<string, TranslationKey> = {
   search: "agent.step.search",
   read: "agent.step.read",
   github: "agent.step.github",
+  file: "agent.step.file",
+  terminal: "agent.step.terminal",
+  memory: "agent.step.memory",
   synthesize: "agent.step.synthesize",
 };
 

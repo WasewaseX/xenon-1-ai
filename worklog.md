@@ -349,3 +349,24 @@ Work Log:
 Stage Summary:
 - Xenon agent now has real cloud access: read any public GitHub repo/file, commit files to the configured repo with the server-side PAT (never exposed to client)
 - Welcome/disclaimer bug fixed; suggestion cards match Z.ai agent style; dark Cursor palette + light theme + RTL all verified
+
+---
+Task ID: 8
+Agent: Z.ai Code (main thread)
+Task: Real tool calling + autonomous agent loop + long-term memory (per user's approved plan)
+
+Work Log:
+- Confirmed z-ai-web-dev-sdk passes through OpenAI-compatible `tools`/`tool_choice` (spread in createChatCompletion body) — GLM function calling is usable
+- New src/lib/xenon/tools.ts: 10-tool registry (web_search, web_fetch, github_read, github_write, read_file, write_file, list_files, run_command, memory_search, memory_save) with sandbox guards: workspace confinement for writes/terminal, project-root read with .env/.git/node_modules/db denials, 25s command timeout, 8KB output caps, destructive-command blocklist
+- New src/lib/xenon/agent-loop.ts: real function-calling loop (max 10 rounds, 240s budget) — GLM picks tools, real results return as role=tool messages, error recovery by the model, adaptive thinking on round 1 for complex requests, forced final answer via tool_choice:"none", per-tool UsageEvent logging (kind "tool") for measurability, ToolsUnsupportedError fallback signal
+- llm.ts: completeWithTools (non-streaming with tools, defensive tool_call parsing), pageReader gained maxChars param (agent fetches 6k chars)
+- prompts.ts: MODE agent rewritten for tool protocol; AGENT_TOOL_PROMPT (fast path, budget, mandatory run-before-claim verification, error recovery, citation rule); ROLLING_SUMMARY_PROMPT; buildSystemPrompt gained historySummary
+- memory.ts: updateRollingSummary — conversations past 24 messages get a 120-word rolling summary stored on Conversation.summary (new Prisma column, db pushed), injected into system prompt next turn
+- /api/chat: agent mode now runs the real tool loop (chunked delta display, live step + sources events), scripted research kept as graceful fallback when gateway rejects tools; GH intent block skipped when loop already committed via github_write; rolling summary fired post-done
+- Frontend: AgentStepKind + file/terminal/memory in types.ts, steps.ts validator, i18n (EN/FA), agent-activity icons (FileText/Terminal/Database)
+- E2E: read_file task → correct real answer; write hello.js + run_command → XENON_AGENT_OK exit 0 with verification; .env.local read denied by sandbox and honestly reported; browser E2E — activity timeline, auto title, general-mode fast path, persistence across reload, zero console errors; fixed read_file workspace-fallback gap found in browser test
+- Incident: dev server (boot-spawned) was killed for a Prisma client refresh and session-spawned processes get reaped by the sandbox; restore attempted via platform cron (fixed_rate watchdog job 476988)
+
+Stage Summary:
+- Xenon agent now has REAL tool calling: GLM autonomously searches/reads the web, reads GitHub, inspects project files, writes+runs code in a sandboxed workspace with self-verification, and persists long-term memory — still 100% Z.ai GLM, no other provider
+- Simple questions stay on the fast path (no tools); complexity triggers adaptive thinking; every tool call is measured in UsageEvent stats

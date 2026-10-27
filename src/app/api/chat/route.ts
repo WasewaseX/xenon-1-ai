@@ -13,6 +13,8 @@ import {
   pageReader,
 } from "@/lib/xenon/llm";
 import { sseStream } from "@/lib/xenon/sse";
+import { runAgentLoop, ToolsUnsupportedError } from "@/lib/xenon/agent-loop";
+import { updateRollingSummary } from "@/lib/xenon/memory";
 import {
   parseGithubUrl,
   githubRead,
@@ -149,6 +151,23 @@ function pickPagesToRead(all: ResearchSource[], max: number, alreadyRead: Set<st
   return picked;
 }
 
+/** تقسیم متن به تکه‌های خوانا برای نمایش روان پاسخ نهایی عامل */
+function chunkText(text: string, size: number): string[] {
+  if (text.length <= size) return [text];
+  const chunks: string[] = [];
+  let i = 0;
+  while (i < text.length) {
+    let end = Math.min(i + size, text.length);
+    if (end < text.length) {
+      const brk = Math.max(text.lastIndexOf(" ", end), text.lastIndexOf("\n", end));
+      if (brk > i + size / 3) end = brk + 1;
+    }
+    chunks.push(text.slice(i, end));
+    i = end;
+  }
+  return chunks;
+}
+
 interface ChatBody {
   conversationId?: string | null;
   mode?: string;
@@ -235,6 +254,7 @@ export async function POST(req: NextRequest) {
       mode,
       memories: memories.map((m) => m.content),
       systemInstruction: dbConversation?.systemInstruction,
+      historySummary: dbConversation?.summary,
     });
 
     // ---------- ۴) پیوست‌ها: متن و صدا ----------
@@ -309,6 +329,7 @@ export async function POST(req: NextRequest) {
     let assistantContent = "";
     let thinkingContent = "";
     let servedModel: string | undefined;
+    let ghWrittenByLoop = false;
     const assistantMessage = await db.message.create({
       data: {
         conversationId: conversation.id,
@@ -556,17 +577,60 @@ export async function POST(req: NextRequest) {
           } else if (chunk.kind === "finish" && chunk.servedModel) servedModel = chunk.servedModel;
         }
       } else {
-        // زبانی: GLM با بودجه زمینه — و حلقه عامل برای حالت ایجنت
+        // زبانی: GLM با بودجه زمینه — حالت ایجنت با حلقهٔ فراخوانی ابزار واقعی
         const isAgent = mode === "agent" && !!userContent;
 
         let agentContext = "";
         let synthStep: { done: (summary?: string) => void } | null = null;
-        if (isAgent) {
+        let loopHandled = false;
+
+        if (isAgent && !signal.aborted) {
+          try {
+            const result = await runAgentLoop({
+              systemPrompt,
+              history: historyMessages,
+              userContent,
+              attachmentContext,
+              emit,
+              signal,
+              onSources: (all) => {
+                sources = all;
+                emit({ type: "sources", sources: [...sources] });
+              },
+              onThinking: (t) => {
+                thinkingContent += t;
+                emit({ type: "thinking", text: t });
+              },
+            });
+            agentSteps.push(...result.steps);
+            if (result.servedModel) servedModel = result.servedModel;
+            if (result.sources.length > 0) {
+              sources = result.sources;
+              emit({ type: "sources", sources: [...sources] });
+            }
+            ghWrittenByLoop = result.usedTools.includes("github_write");
+            // پاسخ نهایی حلقه به‌صورت تکه‌های خوانا نمایش داده می‌شود
+            for (const chunk of chunkText(result.content, 480)) {
+              pushDelta(chunk);
+            }
+            loopHandled = true;
+          } catch (err) {
+            if (err instanceof ToolsUnsupportedError) {
+              console.warn("[chat] gateway rejected tools; falling back to scripted research:", err.message);
+            } else {
+              console.warn("[chat] agent loop failed; falling back to scripted research:", err);
+            }
+          }
+        }
+
+        if (isAgent && !loopHandled && !signal.aborted) {
+          // مسیر جایگزین اسکریپتی: درگاه بدون پشتیبانی ابزار یا شکست حلقه
           agentContext = await runAgentResearch();
           // گام سنتز درست پیش از پاسخ جریانی نهایی
           synthStep = startAgentStep("synthesize", "Synthesizing the answer");
         }
 
+        if (!loopHandled) {
         const llmMessages: Array<{ role: "system" | "user" | "assistant"; content: string }> = [
           { role: "system", content: systemPrompt + researchContext + agentContext },
           ...historyMessages.map((m) => ({ role: m.role, content: m.content })),
@@ -622,6 +686,7 @@ export async function POST(req: NextRequest) {
         } finally {
           if (synthStep && !signal.aborted) synthStep.done();
         }
+        }
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : "خطای ناشناخته در تولید پاسخ";
@@ -635,7 +700,7 @@ export async function POST(req: NextRequest) {
     // مسیر/پیام/محتوا را برمی‌سازد و از طریق Contents API کامیت می‌شود.
     const GH_SAVE_INTENT_RE =
       /\b(save|store|push|backup|commit|upload|sabt)\b[\s\S]{0,120}\b(github|repo|repository)\b/i;
-    if (!signal.aborted && assistantContent && !hasImages && GH_SAVE_INTENT_RE.test(userContent)) {
+    if (!signal.aborted && assistantContent && !hasImages && !ghWrittenByLoop && GH_SAVE_INTENT_RE.test(userContent)) {
       const saveStep = startAgentStep("github", "Saving to GitHub");
       try {
         if (!ghConfigured()) {
@@ -728,6 +793,11 @@ Rules:
       .catch(() => undefined);
 
     emit({ type: "done", messageId: assistantMessage.id, servedModel, langWarning });
+
+    // ---------- حافظهٔ بلندمدت: خلاصهٔ روان برای گفتگوهای بلند (غیرمسدودکننده) ----------
+    if (!signal.aborted) {
+      void updateRollingSummary(conversation.id);
+    }
 
     // ---------- ۹) عنوان خودکار برای گفتگوی تازه ----------
     const needsTitle = !dbConversation?.title || dbConversation.title === "گفتگوی جدید";

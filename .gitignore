@@ -56,3 +56,8 @@ tool-results/
 
 # novel build intermediates
 scripts/novel/build/
+agent-workspace/
+
+# agent build leftovers
+content/novel/.generate.lock
+public/novel/_build/

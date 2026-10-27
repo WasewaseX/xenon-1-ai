@@ -56,6 +56,112 @@ export async function complete(
   return { content, servedModel: res?.model };
 }
 
+// --- فراخوانی ابزار (function calling) — حلقه عامل خودکار ---
+
+/** خطایی که یعنی درگاه پارامترهای ابزار را نپذیرفت → مسیر جایگزین اسکریپتی */
+export class ToolsUnsupportedError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "ToolsUnsupportedError";
+  }
+}
+
+export interface ToolFunctionSpec {
+  name: string;
+  description: string;
+  parameters: Record<string, unknown>;
+}
+
+export interface ToolSpec {
+  type: "function";
+  function: ToolFunctionSpec;
+}
+
+/** فراخوان ابزار خام همان‌طور که از درگاه می‌آید */
+export interface RawToolCall {
+  id: string;
+  type: "function";
+  function: { name: string; arguments: string };
+}
+
+/** پیام حلقه عامل — شامل نقش tool و tool_calls برای پروتکل فراخوانی ابزار */
+export interface ToolLoopMessage {
+  role: "system" | "user" | "assistant" | "tool";
+  content: string;
+  tool_calls?: RawToolCall[];
+  tool_call_id?: string;
+}
+
+export interface CompleteWithToolsResult {
+  content: string;
+  reasoning: string;
+  toolCalls: Array<{ id: string; name: string; arguments: string }>;
+  rawToolCalls: RawToolCall[];
+  servedModel?: string;
+}
+
+/**
+ * فراخوانی غیرجریانی با ابزارها (GLM function calling).
+ * پارامترهای tools/tool_choice از طریق SDK به درگاه GLM عبور می‌کنند
+ * (بدنه SDK دارای index-signature است و کلیدهای اضافه را پاس می‌دهد).
+ */
+export async function completeWithTools(
+  messages: ToolLoopMessage[],
+  opts: { tools?: ToolSpec[]; toolChoice?: "auto" | "none"; thinking?: boolean } = {}
+): Promise<CompleteWithToolsResult> {
+  const zai = await getZai();
+  const body: Record<string, unknown> = {
+    messages: messages as unknown[],
+    stream: false,
+    thinking: { type: opts.thinking ? "enabled" : "disabled" },
+  };
+  if (opts.tools?.length) {
+    body.tools = opts.tools;
+    body.tool_choice = opts.toolChoice === "none" ? "none" : "auto";
+  }
+
+  let res: {
+    model?: string;
+    choices?: Array<{
+      message?: {
+        content?: string | null;
+        reasoning_content?: string | null;
+        tool_calls?: RawToolCall[];
+      };
+    }>;
+  };
+  try {
+    res = (await zai.chat.completions.create(body as never)) as typeof res;
+  } catch (err) {
+    // اگر درگاه پارامتر tools را نپذیرفت، به‌صورت صریح علامت بزن تا فراخوان
+    // به مسیر پژوهش اسکریپتی قدیمی سقوط کند (graceful degradation).
+    if (opts.tools?.length) {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (/tool|function.?call|unrecognized|unknown (field|argument)|invalid request|unsupported/i.test(msg)) {
+        throw new ToolsUnsupportedError(msg);
+      }
+    }
+    throw err;
+  }
+
+  const message = res?.choices?.[0]?.message ?? {};
+  const rawToolCalls: RawToolCall[] = Array.isArray(message.tool_calls) ? message.tool_calls : [];
+  const toolCalls = rawToolCalls
+    .filter((tc) => tc?.function?.name)
+    .map((tc) => ({
+      id: tc.id || `call_${Math.random().toString(36).slice(2, 10)}`,
+      name: tc.function.name,
+      arguments: typeof tc.function.arguments === "string" ? tc.function.arguments : JSON.stringify(tc.function.arguments ?? {}),
+    }));
+  return {
+    content: message.content ?? "",
+    reasoning: message.reasoning_content ?? "",
+    toolCalls,
+    rawToolCalls: toolCalls.map((tc, i) => rawToolCalls[i]).filter(Boolean),
+    servedModel: res?.model,
+  };
+}
+
 /**
  * درخواست زبانی جریانی — یک ReadableStream<Uint8Array> از SSE خامِ درگاه برمی‌گرداند.
  * فراخوان مسئول تجزیه رخدادها با parseSdkStream است.
@@ -200,9 +306,14 @@ function htmlToReadableText(html: string): string {
 
 /**
  * خواندن یک صفحه وب با ابزار page_reader درگاه (همان SDK فایل).
- * با مهلت زمانی (پیش‌فرض ۲۰ ثانیه) و استخراج متن خوانا؛ در هر خطا null برمی‌گرداند.
+ * با مهلت زمانی (پیش‌فرض ۲۰ ثانیه)، سقف نویسه قابل تنظیم و استخراج متن خوانا؛
+ * در هر خطا null برمی‌گرداند.
  */
-export async function pageReader(url: string, timeoutMs = PAGE_READER_TIMEOUT_MS): Promise<PageReadResult | null> {
+export async function pageReader(
+  url: string,
+  timeoutMs = PAGE_READER_TIMEOUT_MS,
+  maxChars: number = PAGE_TEXT_LIMIT
+): Promise<PageReadResult | null> {
   let timer: ReturnType<typeof setTimeout> | undefined;
   try {
     const zai = await getZai();
@@ -213,7 +324,7 @@ export async function pageReader(url: string, timeoutMs = PAGE_READER_TIMEOUT_MS
     const res = await Promise.race([raw, timeout]);
     const html = res?.data?.html ?? "";
     if (!html) return null;
-    const text = htmlToReadableText(html).slice(0, PAGE_TEXT_LIMIT);
+    const text = htmlToReadableText(html).slice(0, maxChars);
     if (!text) return null;
     return {
       url: res?.data?.url ?? url,

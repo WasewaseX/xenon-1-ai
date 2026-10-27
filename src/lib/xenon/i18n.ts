@@ -212,6 +212,9 @@ const en = {
   "agent.step.search": "Searching the web",
   "agent.step.read": "Reading",
   "agent.step.github": "GitHub cloud access",
+  "agent.step.file": "File operation",
+  "agent.step.terminal": "Terminal command",
+  "agent.step.memory": "Memory access",
   "agent.step.synthesize": "Synthesizing the answer",
 
   // نوار وضعیت
@@ -411,6 +414,9 @@ const fa: Record<TranslationKey, string> = {
   "agent.step.search": "جست‌وجوی وب",
   "agent.step.read": "خواندن صفحه",
   "agent.step.github": "دسترسی ابری گیت‌هاب",
+  "agent.step.file": "عملیات فایل",
+  "agent.step.terminal": "فرمان ترمینال",
+  "agent.step.memory": "دسترسی به حافظه",
   "agent.step.synthesize": "تولید پاسخ",
 
   "status.attribution": "قدرت‌گرفته از GLM از طریق API زی‌ای‌آی",

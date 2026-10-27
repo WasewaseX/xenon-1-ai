@@ -26,8 +26,9 @@ model Conversation {
   folderId          String?
   folder            Folder?   @relation(fields: [folderId], references: [id], onDelete: SetNull)
   pinned            Boolean   @default(false)
-  mode              String    @default("general") // general | reasoning | coding | research
+  mode              String    @default("general") // general | reasoning | coding | research | agent
   systemInstruction String?
+  summary           String?   // خلاصهٔ روان برای پیام‌های قدیمی‌تر از بودجهٔ زمینه (حافظه بلندمدت)
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
   messages          Message[]
