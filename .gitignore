@@ -61,3 +61,4 @@ agent-workspace/
 # agent build leftovers
 content/novel/.generate.lock
 public/novel/_build/
+.zscripts/dev.pid
