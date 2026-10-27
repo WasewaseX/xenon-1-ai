@@ -71,8 +71,10 @@ function LanguageSwitcher() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        {/* suppressHydrationWarning: React 19.2/Next 16 dev 模式下 Radix 触发器自动生成的
-            useId 偶发路径差异（最终 DOM 一致、无功能影响）——仅屏蔽该良性告警 */}
+        {/* suppressHydrationWarning: in React 19.2/Next 16 dev mode, the Radix trigger's
+            auto-generated useId can occasionally differ between server and client render
+            (final DOM is identical, no functional impact) — this only silences that
+            benign warning. */}
         <Button
           variant="ghost"
           size="icon"

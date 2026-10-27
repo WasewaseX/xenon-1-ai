@@ -207,8 +207,9 @@ function ModePill() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        {/* suppressHydrationWarning: 同 workspace.tsx 语言按钮——屏蔽 React 19.2 dev
-            模式下 Radix 自动 id 的良性水合告警 */}
+        {/* suppressHydrationWarning: same as the language button in workspace.tsx —
+            silences a benign hydration warning from Radix's auto-generated id in
+            React 19.2 dev mode */}
         <button
           type="button"
           suppressHydrationWarning

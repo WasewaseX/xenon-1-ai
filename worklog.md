@@ -370,3 +370,19 @@ Work Log:
 Stage Summary:
 - Xenon agent now has REAL tool calling: GLM autonomously searches/reads the web, reads GitHub, inspects project files, writes+runs code in a sandboxed workspace with self-verification, and persists long-term memory — still 100% Z.ai GLM, no other provider
 - Simple questions stay on the fast path (no tools); complexity triggers adaptive thinking; every tool call is measured in UsageEvent stats
+
+---
+Task ID: 11
+Agent: Z.ai Code (main thread)
+Task: Fix the reported "render error" — full diagnostic sweep + repairs
+
+Work Log:
+- Swept every surface via agent-browser: welcome screen, all agent/tool conversations, live agent run (file create + read-back OK), image mode (robot image generated + rendered), regenerate, memory panel, conversation settings, full Persian RTL UI, light+dark themes, mobile 480px viewport, cold fresh-session loads, curl SSR — zero page errors, zero console errors, dev.log clean, lint clean
+- ROOT CAUSE FOUND #1: src/app/api/upload/route.ts had been deleted from the working tree (existed in last commit) — attachment uploads 404'd and every attach attempt showed the red "upload failed" toast; restored from git, verified end-to-end in browser (chip shown, Xenon read the real file content and quoted it correctly)
+- ROOT CAUSE FOUND #2: TTS used an invalid combination (stream:true + response_format:"wav" — streaming is PCM-only per the Z.ai TTS contract) and a 1200-char cap above the API's 1024 limit; probed the live gateway (stream:false+wav returns raw RIFF bytes OK; mp3 rejected with code 1214) and rewrote tts() in llm.ts to non-streaming WAV <= 1024 chars with arrayBuffer path + stream/JSON fallbacks; route limit aligned to 1024; verified API returns valid RIFF/WAV base64
+- Removed two Chinese code comments (workspace.tsx, composer.tsx suppressHydrationWarning notes) and replaced with English per the user's standing English-only rule
+- Confirmed the welcome-screen purple glow fades smoothly on mobile/light/dark via pixel sampling (no banding — earlier suspicion was a screenshot-scaling illusion)
+
+Stage Summary:
+- Attachments fully repaired and browser-verified end-to-end; TTS now uses a contract-valid, gateway-verified configuration; all UI surfaces render clean in EN/FA, RTL/LTR, light/dark, desktop/mobile
+- Honest caveat: audio playback itself cannot be verified inside the sandbox's headless browser (no audio codec — NotSupportedError is environmental); the API payload is verified-correct WAV

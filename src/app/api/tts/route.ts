@@ -24,8 +24,8 @@ export async function POST(req: NextRequest) {
   if (!text) {
     return Response.json({ error: "متن خالی است" }, { status: 400 });
   }
-  if (text.length > 1200) {
-    return Response.json({ error: "متن برای تبدیل به گفتار بیش از حد بلند است (حداکثر ۱۲۰۰ نویسه)" }, { status: 400 });
+  if (text.length > 1024) {
+    return Response.json({ error: "متن برای تبدیل به گفتار بیش از حد بلند است (حداکثر ۱۰۲۴ نویسه)" }, { status: 400 });
   }
 
   try {

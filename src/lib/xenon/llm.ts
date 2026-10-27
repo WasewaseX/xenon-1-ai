@@ -359,7 +359,10 @@ export async function webSearch(query: string, num = 6, recencyDays?: number): P
 }
 
 /**
- * تبدیل متن به گفتار — جریانی، خروجی base64 کامل (WAV).
+ * Convert text to speech — returns complete base64 audio.
+ * Uses non-streaming WAV (verified against the live gateway: this combo returns raw
+ * WAV bytes; mp3 is rejected by the gateway with code 1214, and streaming is
+ * PCM-only per the TTS contract).
  */
 export async function tts(
   text: string,
@@ -367,16 +370,34 @@ export async function tts(
   speed = 1.0
 ): Promise<{ base64: string; format: string } | null> {
   const zai = await getZai();
+  // API hard limit: 1024 characters per request
   const res = (await zai.audio.tts.create({
-    input: text.slice(0, 1200),
+    input: text.slice(0, 1024),
     voice,
     speed,
-    stream: true,
+    stream: false,
     response_format: "wav",
-  })) as unknown as { body?: ReadableStream<Uint8Array> };
+  })) as unknown as Record<string, unknown>;
 
-  if (res?.body && typeof res.body.getReader === "function") {
-    const reader = res.body.getReader();
+  // Preferred path: standard Response object → arrayBuffer with raw WAV bytes
+  const maybeArrayBuffer = (res as unknown as { arrayBuffer?: () => Promise<ArrayBuffer> }).arrayBuffer;
+  if (typeof maybeArrayBuffer === "function") {
+    const arrayBuffer = await maybeArrayBuffer.call(res);
+    if (arrayBuffer && arrayBuffer.byteLength > 44) {
+      const head = String.fromCharCode(...new Uint8Array(arrayBuffer).slice(0, 4));
+      // Raw binary audio (RIFF/WAV) — encode directly
+      if (head === "RIFF") {
+        const base64 = Buffer.from(new Uint8Array(arrayBuffer)).toString("base64");
+        if (base64) return { base64, format: "wav" };
+      }
+      // Otherwise it may be SSE text from a stream-shaped response — fall through
+    }
+  }
+
+  // Fallback 1: streaming body (SSE chunks of base64 text)
+  const body = (res as unknown as { body?: ReadableStream<Uint8Array> }).body;
+  if (body && typeof body.getReader === "function") {
+    const reader = body.getReader();
     const decoder = new TextDecoder();
     let buffer = "";
     const chunks: string[] = [];
@@ -399,7 +420,7 @@ export async function tts(
             if (delta?.content) chunks.push(delta.content);
             if (delta?.return_format) format = delta.return_format;
           } catch {
-            // بلوک ناقص
+            // partial block
           }
         }
       }
@@ -409,12 +430,11 @@ export async function tts(
     return null;
   }
 
-  // جایگزین: پاسخ غیرجریانی
-  const fallback = res as unknown as Record<string, unknown>;
+  // Fallback 2: plain JSON-ish payloads carrying base64 directly
   const data =
-    (fallback?.data as Array<{ base64?: string }>)?.[0]?.base64 ??
-    (fallback?.audio as string) ??
-    (fallback?.base64 as string);
+    (res?.data as Array<{ base64?: string }>)?.[0]?.base64 ??
+    (res?.audio as string) ??
+    (res?.base64 as string);
   if (data && typeof data === "string") {
     return { base64: data.replace(/^data:[^;]+;base64,/, ""), format: "wav" };
   }
