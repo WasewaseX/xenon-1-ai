@@ -57,7 +57,7 @@ export interface GhReadResult {
   ok: boolean;
   label: string;
   context: string;
-  source?: { url: string; name: string; snippet: string };
+  source?: { url: string; name: string; snippet: string; host_name?: string };
   error?: string;
 }
 

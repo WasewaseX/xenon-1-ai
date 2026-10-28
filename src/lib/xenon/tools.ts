@@ -456,10 +456,15 @@ function runShell(command: string, cwd: string, timeoutMs: number): Promise<{ ok
         cwd,
         timeout: timeoutMs,
         maxBuffer: 2 * 1024 * 1024,
-        env: { PATH: process.env.PATH ?? "/usr/local/bin:/usr/bin:/bin", HOME: cwd, LANG: "C.UTF-8" },
+        env: {
+          PATH: process.env.PATH ?? "/usr/local/bin:/usr/bin:/bin",
+          HOME: cwd,
+          LANG: "C.UTF-8",
+          NODE_ENV: process.env.NODE_ENV,
+        },
       },
       (error, stdout, stderr) => {
-        const timedOut = error && (error as NodeJS.ErrnoException).killed;
+        const timedOut = error && (error as { killed?: boolean }).killed;
         const out = [stdout?.toString() ?? "", stderr?.toString() ?? ""].filter(Boolean).join("\n--- stderr ---\n");
         const code = error && !timedOut ? (typeof (error as { code?: unknown }).code === "number" ? (error as { code: number }).code : 1) : 0;
         const tail = `\n[exit ${code}${timedOut ? ", killed after timeout" : ""}]`;

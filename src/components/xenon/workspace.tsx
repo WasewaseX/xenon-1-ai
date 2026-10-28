@@ -8,7 +8,6 @@ import { useEffect, useState } from "react";
 import { useTheme } from "next-themes";
 import { motion } from "framer-motion";
 import {
-  BookOpen,
   Brain,
   Check,
   Languages,
@@ -34,9 +33,8 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
-import { formatNumber, useI18n } from "@/lib/xenon/i18n";
+import { useI18n } from "@/lib/xenon/i18n";
 import { useLocale, useT } from "@/components/xenon/locale-provider";
-import { SERVED_TEXT_MODEL } from "@/lib/xenon/models";
 import { useXenon } from "@/lib/xenon/store";
 import { ConnectionBadge } from "./connection-badge";
 import { ChatArea } from "./chat-area";
@@ -196,44 +194,6 @@ function Header({
   );
 }
 
-function StatusBar() {
-  const t = useT();
-  const locale = useLocale();
-  const stats = useXenon((s) => s.stats);
-  return (
-    <footer className="flex h-8 shrink-0 items-center gap-3 border-t border-border/50 px-3 text-[0.7rem] text-muted-foreground">
-      <span className="flex min-w-0 items-center gap-1.5">
-        <span className="size-1.5 shrink-0 rounded-full bg-emerald-500" aria-hidden />
-        <span className="truncate">
-          {t("status.attribution")}{" "}
-          <span className="xenon-mono" dir="ltr">
-            (served: {SERVED_TEXT_MODEL})
-          </span>
-        </span>
-      </span>
-      <a
-        href="/novel/the-ninth-vein.pdf"
-        target="_blank"
-        rel="noreferrer"
-        className="hidden shrink-0 items-center gap-1 whitespace-nowrap rounded-md px-1.5 py-0.5 hover:bg-muted hover:text-foreground sm:flex"
-        aria-label={t("status.library")}
-      >
-        <BookOpen className="size-3" aria-hidden />
-        {t("status.library")}
-      </a>
-      <span aria-live="polite" className="xenon-mono ms-auto hidden shrink-0 whitespace-nowrap tabular-nums sm:inline">
-        {stats
-          ? t("status.stats", {
-              conversations: formatNumber(stats.conversations, locale),
-              messages: formatNumber(stats.messages, locale),
-              memories: formatNumber(stats.memories, locale),
-            })
-          : t("status.loading")}
-      </span>
-    </footer>
-  );
-}
-
 export function XenonWorkspace() {
   const t = useT();
   const locale = useLocale();
@@ -321,8 +281,6 @@ export function XenonWorkspace() {
             </>
           )}
         </motion.div>
-
-        <StatusBar />
       </main>
 
       <MemoryPanel open={memoryOpen} onOpenChange={setMemoryOpen} />

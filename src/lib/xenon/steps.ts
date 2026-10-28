@@ -6,10 +6,11 @@
 // تا هم‌زمان با افزودن حالت "agent" به بک‌اند، رابط کاربری آماده باشد و بدون
 // رخدادهای step هم هیچ چیز نشکند (progressive enhancement).
 
-import type { MessageDTO } from "./types";
+import type { AgentStepKind, AgentStepState, MessageDTO } from "./types";
 
-export type AgentStepKind = "plan" | "search" | "read" | "github" | "synthesize";
-export type AgentStepState = "start" | "done";
+// یک منبع حقیقت: تعریف کامل kindها (از جمله file/terminal/memory) در types.ts است
+// تا با حلقهٔ عامل بک‌اند هم‌راستا بماند و دوباره واگرا نشود.
+export type { AgentStepKind, AgentStepState };
 
 /** یک گام از فعالیت عامل */
 export interface AgentStep {

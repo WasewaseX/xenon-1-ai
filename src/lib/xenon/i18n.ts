@@ -169,7 +169,6 @@ const en = {
   // پیام‌ها
   "message.reasoningChain": "Reasoning chain",
   "message.sources": "Sources",
-  "message.servedBy": "Served by {model}",
   "message.langWarning": "Language consistency warning: unexpected characters were detected in this response.",
   "message.toast.copyFailed": "Copy failed",
   "message.toast.ttsFailed": "Speech synthesis failed",
@@ -218,10 +217,6 @@ const en = {
   "agent.step.synthesize": "Synthesizing the answer",
 
   // نوار وضعیت
-  "status.attribution": "Powered by GLM via the Z.ai API",
-  "status.library": "Library: The Ninth Vein — 100-Chapter Edition (PDF)",
-  "status.stats": "{conversations} chats · {messages} messages · {memories} memories",
-  "status.loading": "…",
 
   // پیام‌های فروش (store)
   "toast.conversationMissing": "This conversation no longer exists and was removed from the list.",
@@ -384,7 +379,6 @@ const fa: Record<TranslationKey, string> = {
 
   "message.reasoningChain": "زنجیره استدلال",
   "message.sources": "منابع",
-  "message.servedBy": "سرو‌شده با {model}",
   "message.langWarning": "هشدار سازگاری زبانی: نویسه‌های غیرمنتظره در پاسخ شناسایی شد.",
   "message.toast.copyFailed": "کپی ناموفق بود",
   "message.toast.ttsFailed": "تولید گفتار ناموفق بود",
@@ -430,10 +424,6 @@ const fa: Record<TranslationKey, string> = {
   "agent.step.memory": "دسترسی به حافظه",
   "agent.step.synthesize": "تولید پاسخ",
 
-  "status.attribution": "قدرت‌گرفته از GLM از طریق API زی‌ای‌آی",
-  "status.library": "کتابخانه: نهمین رگ — نسخهٔ کامل ۱۰۰ فصلی (PDF)",
-  "status.stats": "{conversations} گفتگو · {messages} پیام · {memories} حافظه",
-  "status.loading": "…",
 
   "toast.conversationMissing": "این گفتگو دیگر موجود نیست و از فهرست حذف شد.",
   "toast.conversationLoadFailed": "بارگذاری گفتگو ناموفق بود.",

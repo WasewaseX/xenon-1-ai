@@ -296,7 +296,6 @@ export function MessageItem({ message, isLastAssistant = false, onRegenerated }:
             </Button>
             <span className="xenon-mono ms-1.5 truncate text-muted-foreground/80" dir="auto">
               {profileLabel(profile, locale)}
-              {message.servedModel ? ` · ${t("message.servedBy", { model: message.servedModel })}` : ""}
             </span>
           </footer>
         ) : null}
