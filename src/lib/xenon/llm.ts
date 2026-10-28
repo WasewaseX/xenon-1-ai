@@ -38,6 +38,35 @@ export async function getZai(): Promise<ZAI> {
   return zaiInstance;
 }
 
+/** تشخیص خطای ۴۲۹ (محدودیت نرخ درگاه بالادست) */
+export function isRateLimitError(err: unknown): boolean {
+  const msg = err instanceof Error ? err.message : String(err ?? "");
+  return /\b429\b|too many requests|rate.?limit/i.test(msg);
+}
+
+const RATE_LIMIT_RETRY_DELAYS_MS = [2_000, 6_000, 15_000, 30_000];
+
+/**
+ * اجرای یک فراخوانی بالادست با تلاش مجدد خودکار روی ۴۲۹.
+ * backoff نمایی (۲s → ۶s → ۱۵s → ۳۰s) — مجموع ۵۳ ثانیه؛ پینگ‌های keepalive
+ * جریان SSE اتصال را در این فاصله زنده نگه می‌دارند.
+ */
+export async function with429Retry<T>(fn: () => Promise<T>, label = "llm"): Promise<T> {
+  let lastErr: unknown;
+  for (let attempt = 0; attempt <= RATE_LIMIT_RETRY_DELAYS_MS.length; attempt++) {
+    try {
+      return await fn();
+    } catch (err) {
+      lastErr = err;
+      if (attempt === RATE_LIMIT_RETRY_DELAYS_MS.length || !isRateLimitError(err)) throw err;
+      const delay = RATE_LIMIT_RETRY_DELAYS_MS[attempt];
+      console.warn(`[xenon] ${label}: 429 rate limited — retry ${attempt + 1}/${RATE_LIMIT_RETRY_DELAYS_MS.length} in ${delay}ms`);
+      await new Promise((r) => setTimeout(r, delay));
+    }
+  }
+  throw lastErr;
+}
+
 /**
  * درخواست زبانی غیرجریانی.
  */
@@ -46,12 +75,16 @@ export async function complete(
   opts: { thinking?: boolean; model?: string } = {}
 ): Promise<{ content: string; servedModel?: string }> {
   const zai = await getZai();
-  const res = await zai.chat.completions.create({
-    messages,
-    stream: false,
-    thinking: { type: opts.thinking ? "enabled" : "disabled" },
-    ...(opts.model ? { model: opts.model } : {}),
-  });
+  const res = (await with429Retry(
+    () =>
+      zai.chat.completions.create({
+        messages,
+        stream: false,
+        thinking: { type: opts.thinking ? "enabled" : "disabled" },
+        ...(opts.model ? { model: opts.model } : {}),
+      }),
+    "complete"
+  )) as { choices?: Array<{ message?: { content?: string } }>; model?: string };
   const content: string = res?.choices?.[0]?.message?.content ?? "";
   return { content, servedModel: res?.model };
 }
@@ -131,7 +164,7 @@ export async function completeWithTools(
     }>;
   };
   try {
-    res = (await zai.chat.completions.create(body as never)) as typeof res;
+    res = (await with429Retry(() => zai.chat.completions.create(body as never) as Promise<typeof res>, "completeWithTools")) as typeof res;
   } catch (err) {
     // اگر درگاه پارامتر tools را نپذیرفت، به‌صورت صریح علامت بزن تا فراخوان
     // به مسیر پژوهش اسکریپتی قدیمی سقوط کند (graceful degradation).
@@ -171,12 +204,16 @@ export async function completeStream(
   opts: { thinking?: boolean; model?: string } = {}
 ): Promise<ReadableStream<Uint8Array> | null> {
   const zai = await getZai();
-  const body = await zai.chat.completions.create({
-    messages,
-    stream: true,
-    thinking: { type: opts.thinking ? "enabled" : "disabled" },
-    ...(opts.model ? { model: opts.model } : {}),
-  });
+  const body = await with429Retry(
+    () =>
+      zai.chat.completions.create({
+        messages,
+        stream: true,
+        thinking: { type: opts.thinking ? "enabled" : "disabled" },
+        ...(opts.model ? { model: opts.model } : {}),
+      }) as Promise<ReadableStream<Uint8Array>>,
+    "completeStream"
+  );
   return body as unknown as ReadableStream<Uint8Array>;
 }
 
@@ -346,7 +383,7 @@ export async function webSearch(query: string, num = 6, recencyDays?: number): P
   const zai = await getZai();
   const args: { query: string; num?: number; recency_days?: number } = { query, num };
   if (recencyDays) args.recency_days = recencyDays;
-  const results = await zai.functions.invoke("web_search", args);
+  const results = await with429Retry(() => zai.functions.invoke("web_search", args), "webSearch");
   const arr = Array.isArray(results) ? results : [];
   return arr.slice(0, num).map((r, i) => ({
     url: r.url ?? "",

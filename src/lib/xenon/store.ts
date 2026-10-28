@@ -89,6 +89,24 @@ interface XenonState {
 let abortController: AbortController | null = null;
 let currentAudio: HTMLAudioElement | null = null;
 
+// بازیابی خودکار از محدودیت نرخ (۴۲۹ درگاه): حداکثر دو تلاش خودکار پشت‌سرهم با فاصلهٔ ۲۰ ثانیه.
+// تلاش دستی کاربر (کلیک روی Retry یا ارسال تازه) شمارنده را صفر می‌کند تا بن‌بست احساس نشود.
+let rateLimitRetryTimer: ReturnType<typeof setTimeout> | null = null;
+let consecutiveRateLimitAutoRetries = 0;
+const RATE_LIMIT_AUTO_RETRY_MS = 20_000;
+const MAX_RATE_LIMIT_AUTO_RETRIES = 2;
+
+function isRateLimitText(s: string): boolean {
+  return /\b429\b|too many requests|rate.?limit/i.test(s);
+}
+
+function cancelRateLimitRetry() {
+  if (rateLimitRetryTimer) {
+    clearTimeout(rateLimitRetryTimer);
+    rateLimitRetryTimer = null;
+  }
+}
+
 /** ادغام رخدادهای "step" عامل در نقشهٔ گام‌های زنده (id → step) */
 function mergeStepEvent(stepMap: Map<string, AgentStep>, event: XenonStepEvent): AgentStep[] {
   const existing = stepMap.get(event.id);
@@ -230,6 +248,9 @@ export const useXenon = create<XenonState>((set, get) => ({
     const tempUserId = `tmp-u-${Date.now()}`;
     const tempAssistantId = `tmp-a-${Date.now()}`;
 
+    // کاربر چیزی تازه فرستاد → هر تلاش خودکار معلقِ محدودیت نرخ لغو می‌شود
+    cancelRateLimitRetry();
+
     // نمایش خوش‌بینانه پیام کاربر + جای‌گیر دستیار
     const userMessage: MessageDTO = {
       id: tempUserId,
@@ -347,24 +368,56 @@ export const useXenon = create<XenonState>((set, get) => ({
                     servedModel: event.servedModel,
                     langWarning: event.langWarning,
                   });
+                  // پاسخ کامل رسید → شمارندهٔ تلاش خودکار ۴۲۹ صفر می‌شود
+                  consecutiveRateLimitAutoRetries = 0;
                   break;
                 }
-                case "error":
-                  // پیام خطای سرور خام (فارسی/بالادست) نمایش داده نمی‌شود — متن دوستانهٔ دوزبانه
-                  console.error("[xenon] server error event:", event.message);
-                  updateAssistant({
-                    streaming: false,
-                    content: assistantContent || `⚠️ ${translateNow("toast.requestFailed")}`,
-                  });
+                case "error": {
+                  // پیام خطای سرور خام (فارسی/بالادست) نمایش داده نمی‌شود — متن دوستانهٔ دوزبانه.
+                  // console.warn (نه error) تا اورلی dev در Next.js آن را به‌عنوان کرش نشان ندهد —
+                  // خطای سرور روال عادی کار با درگاه است و خودش retry/بازیابی دارد.
+                  console.warn("[xenon] server error event:", event.message);
+                  const rateLimited = !assistantContent && isRateLimitText(event.message);
+                  if (rateLimited && consecutiveRateLimitAutoRetries < MAX_RATE_LIMIT_AUTO_RETRIES) {
+                    // محدودیت نرخ: پیام کاربر حفظ می‌شود و پس از ۲۰ ثانیه خودکار دوباره ارسال می‌شود
+                    consecutiveRateLimitAutoRetries += 1;
+                    set({
+                      lastFailed: {
+                        content: text,
+                        mode,
+                        regenerate: false,
+                        userId: tempUserId,
+                        assistantId: tempAssistantId,
+                      },
+                    });
+                    cancelRateLimitRetry();
+                    rateLimitRetryTimer = setTimeout(() => {
+                      rateLimitRetryTimer = null;
+                      void get().retryLast();
+                    }, RATE_LIMIT_AUTO_RETRY_MS);
+                    updateAssistant({
+                      streaming: false,
+                      content: `⏳ ${translateNow("toast.rateLimitRetrying")}`,
+                    });
+                  } else {
+                    updateAssistant({
+                      streaming: false,
+                      content: assistantContent ||
+                        `⚠️ ${translateNow(rateLimited ? "toast.rateLimit" : "toast.requestFailed")}`,
+                    });
+                  }
                   break;
+                }
               }
             },
           }
         );
       }
     } catch (err) {
-      console.error("[xenon] sendMessage stream failure:", err);
+      console.warn("[xenon] sendMessage stream failure:", err);
       const kind = classifyStreamFailure(err);
+      const errText = err instanceof Error ? err.message : String(err ?? "");
+      const rateLimited = !assistantContent && isRateLimitText(errText);
       if (kind === "aborted") {
         updateAssistant({
           streaming: false,
@@ -374,6 +427,42 @@ export const useXenon = create<XenonState>((set, get) => ({
         // پاسخ نیمه‌تمام حفظ می‌شود و نشان «قطع‌شدگی» روی همان پیام می‌نشیند
         updateAssistant({ streaming: false, interrupted: true });
         toast({ title: translateNow("toast.streamInterrupted"), variant: "destructive" });
+      } else if (rateLimited && consecutiveRateLimitAutoRetries < MAX_RATE_LIMIT_AUTO_RETRIES) {
+        // ۴۲۹ هنگام اتصال: تلاش خودکار پس از ۲۰ ثانیه
+        consecutiveRateLimitAutoRetries += 1;
+        set({
+          lastFailed: {
+            content: text,
+            mode,
+            regenerate: false,
+            userId: tempUserId,
+            assistantId: tempAssistantId,
+          },
+        });
+        cancelRateLimitRetry();
+        rateLimitRetryTimer = setTimeout(() => {
+          rateLimitRetryTimer = null;
+          void get().retryLast();
+        }, RATE_LIMIT_AUTO_RETRY_MS);
+        updateAssistant({
+          streaming: false,
+          content: `⏳ ${translateNow("toast.rateLimitRetrying")}`,
+        });
+      } else if (rateLimited) {
+        // سقف تلاش خودکار پر شده: پیام دوستانهٔ محدودیت نرخ + چیپ Retry (پیام حفظ شده)
+        set({
+          lastFailed: {
+            content: text,
+            mode,
+            regenerate: false,
+            userId: tempUserId,
+            assistantId: tempAssistantId,
+          },
+        });
+        updateAssistant({
+          streaming: false,
+          content: `⚠️ ${translateNow("toast.rateLimit")}`,
+        });
       } else {
         // هیچ متنی نرسید: پیام دوستانه + ثبت ارسال برای «تلاش دوباره» بدون از دست رفتن متن
         set({
@@ -402,10 +491,13 @@ export const useXenon = create<XenonState>((set, get) => ({
       get().refreshStats();
       // همگام‌سازی پیام‌ها با سرور برای اطمینان از شناسه‌های واقعی:
       // ۱) گفتگوی تازه  ۲) سرور شناسهٔ متفاوتی برگردانده (خوددرمانی گفتگوی کهنه)
+      // استثنا: اگر همین ارسال شکست خورد (lastFailed ثبت شد)، همگام‌سازی حباب خطا/⏳ را
+      // با نمای سرور (که هنوز پیام دستیار ندارد) جایگزین نمی‌کند — حباب باید بماند.
+      const failedThisSend = get().lastFailed !== null;
       const active = get().activeId;
       const serverReassigned =
         serverConversationId !== null && serverConversationId !== sentConversationId;
-      if (active && (!sentConversationId || serverReassigned)) {
+      if (!failedThisSend && active && (!sentConversationId || serverReassigned)) {
         api
           .fetchConversation(active)
           .then(({ messages }) => set({ messages }))
@@ -417,6 +509,7 @@ export const useXenon = create<XenonState>((set, get) => ({
   stopStreaming: () => {
     abortController?.abort();
     abortController = null;
+    cancelRateLimitRetry();
     set((s) => ({
       streaming: false,
       sending: false,
@@ -570,6 +663,9 @@ export const useXenon = create<XenonState>((set, get) => ({
     const lf = get().lastFailed;
     if (!lf || get().sending || get().streaming) return;
     set({ lastFailed: null });
+    // تلاش دستی کاربر → شمارندهٔ خودکار ۴۲۹ صفر می‌شود تا بن‌بست پیش نیاید
+    consecutiveRateLimitAutoRetries = 0;
+    cancelRateLimitRetry();
     // حباب‌های خوش‌بینانهٔ تلاش ناموفق (کاربر + خطا) پاک می‌شوند تا ارسال مجدد تکراری نسازد
     if (lf.userId || lf.assistantId) {
       set((s) => ({

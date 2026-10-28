@@ -761,3 +761,21 @@ Work Log:
 Stage Summary:
 - NetworkError class eliminated: retry + watchdog + graceful recovery + visible connection state
 - The Ninth Vein — Complete 100-Chapter Edition shipped at public/novel/the-ninth-vein.pdf (498 pages, ~211.5k words); status-bar label updated
+
+---
+Task ID: X-2
+Agent: orchestrator (main)
+Task: remove UI metadata, kill refusals for large asks, 429 auto-recovery, type hygiene
+
+Work Log:
+- Metadata removed (user: "remove the metadatas wtf are these"): StatusBar footer deleted entirely (Powered by GLM attribution, Library link, chats/messages/memories stats); per-message "Served by glm-4-plus" badge removed; dead i18n keys dropped (status.*, message.servedBy in EN+FA); unused imports pruned
+- Refusal fix (user: "until if i ask it death it will answer properly"): prompts.ts gained EXECUTION_POLICY (never refuse big/long tasks, plan + deliver first installment immediately, no clarifying questions before delivery) in every mode; AGENT mode + AGENT_TOOL_PROMPT gained the Long-form protocol (outline.md -> chapter-00N.md files -> progress.md -> "continue" hand-off, delivery report at the end)
+- E2E verified: same request that produced the canned refusal now delivers "The Crystal Chronicles" outline + real chapters (Ch1/2/3 streamed and persisted across reload); zero metadata strings in DOM; zero console errors
+- Truncation fix: probe showed gateway output ceiling cuts ~3-chapter batches mid-sentence -> unit discipline added to prompts (ONE complete ~2000-word chapter per turn, never a truncated unit, clean "continue" hand-off)
+- 429 resilience (user hit "Too many requests" + dev-overlay crash view): llm.ts gained isRateLimitError + with429Retry (2s/6s/15s/30s backoff) wired into complete/completeWithTools/completeStream/webSearch; store.ts error events now console.warn (no dev-overlay crash view), rate-limit detection + up to 2 client auto-retries at 20s with kept user message + bilingual toast keys (toast.rateLimit / toast.rateLimitRetrying); finally-sync no longer wipes the failure bubble (skip server sync when lastFailed set)
+- Type hygiene: steps.ts AgentStepKind now re-exports types.ts (8-kind source of truth, no more drift); github.ts GhReadResult.source gained host_name?; tools.ts exec env NODE_ENV + killed-cast fixed; tsconfig excludes examples/skills/scripts/mini-services/tauri-yt-downloader -> tsc --noEmit clean, eslint clean
+
+Stage Summary:
+- Xenon now executes big asks instead of refusing; deliveries are complete units (no mid-sentence cuts); 429s self-heal server-side and client-side with visible, bilingual recovery state; UI is metadata-free
+- Upstream quota window (429) observed lasting 15+ min under heavy novel-generation load — final fallback is the friendly bilingual message + Retry chip with kept user text
+- Files touched: src/components/xenon/workspace.tsx, message-item.tsx, src/lib/xenon/{prompts,llm,store,i18n,steps,github,tools}.ts, tsconfig.json, scripts/probe-max-tokens.mjs, worklog.md
